@@ -1,0 +1,29 @@
+:root {
+  --bg-dark: #0d1117;
+  --bg-poker: #0f5132;
+  --bg-card: #f8f9fa;
+  --bg-card-back: #1a1a2e;
+  
+  --neon-gold: #ffd700;
+  --neon-red: #ff4757;
+  --neon-green: #2ed573;
+  --neon-blue: #3742fa;
+  
+  --text-primary: #f8f9fa;
+  --text-secondary: #adb5bd;
+  --text-muted: #6c757d;
+  
+  --border-light: rgba(255, 215, 0, 0.3);
+  --border-dim: rgba(255, 215, 0, 0.15);
+  
+  --shadow-glow: 0 0 20px rgba(255, 215, 0, 0.4);
+  --shadow-dark: 0 8px 32px rgba(0, 0, 0, 0.5);
+  
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
+  
+  --card-width: 70px;
+  --card-height: 98px;
+  --card-radius: 6px;
+}
