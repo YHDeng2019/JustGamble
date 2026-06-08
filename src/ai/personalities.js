@@ -40,6 +40,11 @@ export const getAIPlayer = (index) => {
   return AI_PERSONALITIES[index % AI_PERSONALITIES.length];
 };
 
+// 获取所有 AI 性格列表
+export const getPersonalities = () => {
+  return AI_PERSONALITIES;
+};
+
 // 随机打乱数组（Fisher-Yates 洗牌算法）
 const shuffleArray = (array) => {
   const result = [...array];

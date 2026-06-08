@@ -1,0 +1,152 @@
+/* 联机模式 UI 增强样式 */
+
+/* 连接状态提示 */
+.connection-status {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  z-index: 9999;
+  animation: slideIn 0.3s ease;
+}
+
+.connection-status.reconnecting {
+  background: rgba(255, 193, 7, 0.9);
+  color: #000;
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
+}
+
+.connection-status.disconnected {
+  background: rgba(244, 67, 54, 0.9);
+  color: white;
+  box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4);
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* 错误提示浮层 */
+.error-toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(244, 67, 54, 0.95);
+  color: white;
+  padding: 1rem 2rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: bold;
+  z-index: 9999;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  animation: fadeIn 0.3s ease;
+}
+
+/* 回合提示横幅 */
+.turn-indicator {
+  margin: 0 auto;
+  max-width: 1200px;
+  padding: 0 1rem;
+}
+
+.turn-banner {
+  text-align: center;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  animation: fadeIn 0.3s ease;
+}
+
+.turn-banner.my-turn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.turn-banner.waiting {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 游戏信息右侧布局 */
+.game-info-right {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.room-code {
+  font-size: 0.9rem;
+  color: var(--accent);
+  font-weight: bold;
+}
+
+/* 摸鱼模式下的样式 */
+.stealth-mode .connection-status {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border: 2px solid #000000;
+  box-shadow: none !important;
+}
+
+.stealth-mode .error-toast {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border: 2px solid #000000;
+  box-shadow: none !important;
+}
+
+.stealth-mode .turn-banner.my-turn {
+  background: #000000;
+  color: #ffffff;
+  box-shadow: none;
+  animation: none;
+  border: 2px solid #000000;
+}
+
+.stealth-mode .turn-banner.waiting {
+  background: #f5f5f5;
+  color: #666666;
+  border: 1px solid #cccccc;
+}
+
+.stealth-mode .room-code {
+  color: #000000;
+}

@@ -1,0 +1,330 @@
+import { ref, set, get, update, remove, push, onValue, off } from 'firebase/database';
+import { getFirebaseDB } from './firebase';
+import { generateRoomCode, generateRoomId } from '../utils/roomCodeGenerator';
+
+/**
+ * 创建房间
+ */
+export const createRoom = async (hostUser, settings) => {
+  const db = getFirebaseDB();
+  const roomId = generateRoomId();
+  const roomCode = generateRoomCode();
+
+  const roomData = {
+    roomId,
+    roomCode,
+    hostId: hostUser.userId,
+    isPublic: settings.isPublic || false,
+    status: 'waiting', // waiting | playing | finished
+    settings: {
+      maxPlayers: settings.maxPlayers || 4,
+      initialChips: settings.initialChips || 1000,
+      smallBlind: settings.smallBlind || 10,
+      bigBlind: settings.bigBlind || 20
+    },
+    players: {
+      [hostUser.userId]: {
+        userId: hostUser.userId,
+        displayName: hostUser.displayName,
+        avatar: hostUser.avatar,
+        chips: settings.initialChips || 1000,
+        isReady: true, // 房主默认准备
+        isOnline: true,
+        isBot: false,
+        lastHeartbeat: Date.now()
+      }
+    },
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  };
+
+  await set(ref(db, `rooms/${roomId}`), roomData);
+
+  // 添加到公开房间列表（如果是公开房间）
+  if (settings.isPublic) {
+    await set(ref(db, `lobby/publicRooms/${roomId}`), {
+      roomCode,
+      hostName: hostUser.displayName,
+      playerCount: 1,
+      maxPlayers: settings.maxPlayers || 4,
+      status: 'waiting'
+    });
+  }
+
+  return { roomId, roomCode };
+};
+
+/**
+ * 通过房间码查找房间
+ */
+export const findRoomByCode = async (roomCode) => {
+  const db = getFirebaseDB();
+  const roomsRef = ref(db, 'rooms');
+  const snapshot = await get(roomsRef);
+
+  if (!snapshot.exists()) {
+    return null;
+  }
+
+  const rooms = snapshot.val();
+  for (const [roomId, room] of Object.entries(rooms)) {
+    if (room.roomCode === roomCode) {
+      return { ...room, roomId };
+    }
+  }
+
+  return null;
+};
+
+/**
+ * 加入房间
+ */
+export const joinRoom = async (roomCode, user) => {
+  const room = await findRoomByCode(roomCode);
+
+  if (!room) {
+    throw new Error('房间不存在');
+  }
+
+  if (room.status !== 'waiting') {
+    throw new Error('游戏已开始，无法加入');
+  }
+
+  const playerCount = Object.keys(room.players || {}).length;
+  if (playerCount >= room.settings.maxPlayers) {
+    throw new Error('房间已满');
+  }
+
+  // 检查是否已经在房间中
+  if (room.players[user.userId]) {
+    return room.roomId; // 已在房间中，直接返回
+  }
+
+  const db = getFirebaseDB();
+
+  // 添加玩家到房间
+  await set(ref(db, `rooms/${room.roomId}/players/${user.userId}`), {
+    userId: user.userId,
+    displayName: user.displayName,
+    avatar: user.avatar,
+    chips: room.settings.initialChips,
+    isReady: false,
+    isOnline: true,
+    isBot: false,
+    lastHeartbeat: Date.now()
+  });
+
+  // 更新房间更新时间
+  await update(ref(db, `rooms/${room.roomId}`), {
+    updatedAt: Date.now()
+  });
+
+  // 更新公开房间列表
+  if (room.isPublic) {
+    await update(ref(db, `lobby/publicRooms/${room.roomId}`), {
+      playerCount: playerCount + 1
+    });
+  }
+
+  return room.roomId;
+};
+
+/**
+ * 离开房间
+ */
+export const leaveRoom = async (roomId, userId) => {
+  const db = getFirebaseDB();
+  const roomRef = ref(db, `rooms/${roomId}`);
+  const snapshot = await get(roomRef);
+
+  if (!snapshot.exists()) {
+    return;
+  }
+
+  const room = snapshot.val();
+
+  // 移除玩家
+  await remove(ref(db, `rooms/${roomId}/players/${userId}`));
+
+  const remainingPlayers = Object.keys(room.players || {}).filter(id => id !== userId);
+
+  // 如果房间空了，删除房间
+  if (remainingPlayers.length === 0) {
+    await remove(roomRef);
+    if (room.isPublic) {
+      await remove(ref(db, `lobby/publicRooms/${roomId}`));
+    }
+    return;
+  }
+
+  // 如果房主离开，转让房主
+  if (room.hostId === userId) {
+    const newHostId = remainingPlayers[0];
+    await update(roomRef, {
+      hostId: newHostId,
+      updatedAt: Date.now()
+    });
+  }
+
+  // 更新公开房间列表
+  if (room.isPublic) {
+    await update(ref(db, `lobby/publicRooms/${roomId}`), {
+      playerCount: remainingPlayers.length
+    });
+  }
+};
+
+/**
+ * 设置玩家准备状态
+ */
+export const setPlayerReady = async (roomId, userId, isReady) => {
+  const db = getFirebaseDB();
+  await update(ref(db, `rooms/${roomId}/players/${userId}`), {
+    isReady
+  });
+};
+
+/**
+ * 添加AI机器人
+ */
+export const addBot = async (roomId, personality) => {
+  const db = getFirebaseDB();
+  const roomRef = ref(db, `rooms/${roomId}`);
+  const snapshot = await get(roomRef);
+
+  if (!snapshot.exists()) {
+    throw new Error('房间不存在');
+  }
+
+  const room = snapshot.val();
+  const playerCount = Object.keys(room.players || {}).length;
+
+  if (playerCount >= room.settings.maxPlayers) {
+    throw new Error('房间已满');
+  }
+
+  const botId = `bot_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+
+  await set(ref(db, `rooms/${roomId}/players/${botId}`), {
+    userId: botId,
+    displayName: personality.name,
+    avatar: personality.avatar,
+    chips: room.settings.initialChips,
+    isReady: true,
+    isOnline: true,
+    isBot: true,
+    style: personality.style
+  });
+
+  // 更新公开房间列表
+  if (room.isPublic) {
+    await update(ref(db, `lobby/publicRooms/${roomId}`), {
+      playerCount: playerCount + 1
+    });
+  }
+};
+
+/**
+ * 开始游戏
+ */
+export const startGame = async (roomId) => {
+  const db = getFirebaseDB();
+  await update(ref(db, `rooms/${roomId}`), {
+    status: 'playing',
+    startedAt: Date.now(),
+    updatedAt: Date.now()
+  });
+
+  // 更新公开房间列表
+  const roomSnapshot = await get(ref(db, `rooms/${roomId}`));
+  if (roomSnapshot.exists() && roomSnapshot.val().isPublic) {
+    await update(ref(db, `lobby/publicRooms/${roomId}`), {
+      status: 'playing'
+    });
+  }
+};
+
+/**
+ * 获取房间信息
+ */
+export const getRoom = async (roomId) => {
+  const db = getFirebaseDB();
+  const snapshot = await get(ref(db, `rooms/${roomId}`));
+
+  if (!snapshot.exists()) {
+    return null;
+  }
+
+  return { ...snapshot.val(), roomId };
+};
+
+/**
+ * 监听房间变化
+ */
+export const subscribeToRoom = (roomId, callback) => {
+  const db = getFirebaseDB();
+  const roomRef = ref(db, `rooms/${roomId}`);
+
+  onValue(roomRef, (snapshot) => {
+    if (snapshot.exists()) {
+      callback({ ...snapshot.val(), roomId });
+    } else {
+      callback(null);
+    }
+  });
+
+  // 返回取消订阅函数
+  return () => off(roomRef);
+};
+
+/**
+ * 获取公开房间列表
+ */
+export const getPublicRooms = async () => {
+  const db = getFirebaseDB();
+  const snapshot = await get(ref(db, 'lobby/publicRooms'));
+
+  if (!snapshot.exists()) {
+    return [];
+  }
+
+  const rooms = snapshot.val();
+  return Object.entries(rooms).map(([roomId, room]) => ({
+    ...room,
+    roomId
+  })).filter(room => room.status === 'waiting');
+};
+
+/**
+ * 监听公开房间列表
+ */
+export const subscribeToPublicRooms = (callback) => {
+  const db = getFirebaseDB();
+  const lobbyRef = ref(db, 'lobby/publicRooms');
+
+  onValue(lobbyRef, (snapshot) => {
+    if (snapshot.exists()) {
+      const rooms = snapshot.val();
+      const roomList = Object.entries(rooms).map(([roomId, room]) => ({
+        ...room,
+        roomId
+      })).filter(room => room.status === 'waiting');
+      callback(roomList);
+    } else {
+      callback([]);
+    }
+  });
+
+  return () => off(lobbyRef);
+};
+
+/**
+ * 更新心跳
+ */
+export const updateHeartbeat = async (roomId, userId) => {
+  const db = getFirebaseDB();
+  await update(ref(db, `rooms/${roomId}/players/${userId}`), {
+    lastHeartbeat: Date.now(),
+    isOnline: true
+  });
+};

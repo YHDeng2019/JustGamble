@@ -11,10 +11,27 @@ export const createDeck = () => {
   return deck;
 };
 
-export const shuffleDeck = (deck) => {
+export const shuffleDeck = (deck, seed = null) => {
   const shuffled = [...deck];
+
+  // 如果提供了种子，使用确定性随机数生成器
+  let random;
+  if (seed !== null) {
+    // 简单的种子随机数生成器（Mulberry32）
+    let state = seed;
+    random = () => {
+      state = (state + 0x6D2B79F5) | 0;
+      let t = Math.imul(state ^ (state >>> 15), 1 | state);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  } else {
+    random = Math.random;
+  }
+
+  // Fisher-Yates 洗牌
   for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(random() * (i + 1));
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   return shuffled;

@@ -382,7 +382,15 @@ export class GameEngine {
   getGameState() {
     return {
       stage: this.stage,
-      players: [...this.players],
+      players: this.players.map(p => ({
+        ...p,
+        hand: p.hand ? [...p.hand] : [],
+        bet: p.bet || 0,
+        chips: p.chips || 0,
+        folded: !!p.folded,
+        allIn: !!p.allIn,
+        hasActed: !!p.hasActed
+      })),
       communityCards: [...this.communityCards],
       pot: this.potManager.mainPot,
       currentPlayerIndex: this.currentPlayerIndex,

@@ -85,11 +85,25 @@ const Table = ({ gameState, aiStatus, userSettings, thinkingAi, totalPlayers, wi
   }, [communityCards.length]);
 
   const positions = getSeatPositions(totalPlayers);
+
   // 检查是否有任何AI玩家实际成功使用了LLM（而不仅仅是配置了）
   const hasActiveLLM = Object.values(aiStatus).some(status => status === 'llm');
   const apiConnected = userSettings?.apiKey && userSettings?.apiBaseUrl && hasActiveLLM;
 
-  // 计算小盲/大盲座位索引（庄家后第一、第二位）
+  // 重排玩家，让当前用户始终在底部
+  // 联机模式：使用 userId 精确匹配
+  // 单机模式：userSettings?.userId 不存在时回退到 isHuman
+  const humanIndex = userSettings?.userId
+    ? players.findIndex(p => p.id === userSettings.userId)
+    : players.findIndex(p => p.isHuman);
+
+  const reorderedPlayers = humanIndex >= 0
+    ? [...players.slice(humanIndex), ...players.slice(0, humanIndex)]
+    : players;
+
+  console.log('[Table] 当前用户ID:', userSettings?.userId, '找到的玩家索引:', humanIndex, '总玩家数:', players.length);
+
+  // 计算小盲/大盲座位索引（基于原始索引）
   const sbIndex = (dealerIndex + 1) % players.length;
   const bbIndex = (dealerIndex + 2) % players.length;
 
@@ -132,9 +146,12 @@ const Table = ({ gameState, aiStatus, userSettings, thinkingAi, totalPlayers, wi
         </div>
       </div>
 
-      {players.map((player, i) => {
+      {reorderedPlayers.map((player, displayIndex) => {
+        // 找到该玩家在原始数组中的索引
+        const originalIndex = players.findIndex(p => p.id === player.id);
+
         // 计算该玩家已发到的牌数（发牌顺序：从 dealer+1 开始轮流，每人两张）
-        const dealOrder = (i - (dealerIndex + 1) + players.length) % players.length;
+        const dealOrder = (originalIndex - (dealerIndex + 1) + players.length) % players.length;
         const card1Index = dealOrder; // 第一轮
         const card2Index = players.length + dealOrder; // 第二轮
         const visibleCards = dealingCards !== undefined
@@ -145,14 +162,14 @@ const Table = ({ gameState, aiStatus, userSettings, thinkingAi, totalPlayers, wi
           <PlayerSeat
             key={player.id}
             player={player}
-            isCurrent={i === currentPlayerIndex}
-            isDealer={i === dealerIndex}
-            position={positions[i % positions.length]}
+            isCurrent={originalIndex === currentPlayerIndex}
+            isDealer={originalIndex === dealerIndex}
+            position={positions[displayIndex % positions.length]}
             aiType={aiStatus[player.id]}
             isThinking={thinkingAi === player.id}
             isWinner={winnerHighlight && winnerHighlight.includes(player.id)}
             visibleCards={visibleCards}
-            blindLabel={i === sbIndex ? 'SB' : i === bbIndex ? 'BB' : null}
+            blindLabel={originalIndex === sbIndex ? 'SB' : originalIndex === bbIndex ? 'BB' : null}
           />
         );
       })}

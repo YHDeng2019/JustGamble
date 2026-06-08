@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { refreshSessionUser } from '../auth/session';
 
-const Menu = ({ onStartGame, onHistory, onSettings, onSwitchUser, stealthMode, onToggleStealth, soundEnabled, onToggleSound }) => {
+const Menu = ({ onStartGame, onOnlineMode, onHistory, onSettings, onSwitchUser, stealthMode, onToggleStealth, soundEnabled, onToggleSound }) => {
   const [user, setUser] = useState(null);
   const [playerCount, setPlayerCount] = useState(4);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
@@ -124,7 +124,10 @@ const Menu = ({ onStartGame, onHistory, onSettings, onSwitchUser, stealthMode, o
 
         <div className="menu-buttons">
           <button className="btn btn-primary btn-large" onClick={() => onStartGame(playerCount)}>
-            开始游戏
+            🎮 单机游戏
+          </button>
+          <button className="btn btn-primary btn-large" onClick={onOnlineMode}>
+            🌐 联机对战
           </button>
           <button className="btn btn-large" onClick={onHistory}>
             历史对局

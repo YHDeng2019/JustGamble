@@ -94,10 +94,10 @@ const PlayerSeat = ({ player, isCurrent, isDealer, position, aiType, isThinking,
       {cardsToShow.length > 0 && (
         <div className={`player-hand ${player.showHand ? 'showdown-reveal' : ''}`}>
           {cardsToShow.map((card, i) => (
-            <div key={i} className="deal-card-wrapper" style={{ animationDelay: `${i * 100}ms` }}>
+            <div key={card.id || i} className="deal-card-wrapper" style={{ animationDelay: `${i * 100}ms` }}>
               <Card
                 card={card}
-                flipped={!player.isHuman && !player.showHand}
+                flipped={card.isBack || (!player.isHuman && !player.showHand)}
                 size="mini"
                 className={player.isHuman ? 'player-card-human' : ''}
               />
