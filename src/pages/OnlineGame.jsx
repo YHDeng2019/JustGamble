@@ -6,6 +6,8 @@ import { startHeartbeat, stopHeartbeat } from '../services/heartbeatService';
 import { EMOJIS, sendEmoji, subscribeToEmojis } from '../services/emojiService';
 import { describeCurrentHand } from '../game/handEval';
 import { GAME_STAGES } from '../game/engine';
+import { addGameHistory } from '../auth/userManager';
+import { v4 as uuidv4 } from 'uuid';
 import Table from '../ui/Table';
 import ActionBar from '../ui/ActionBar';
 import GameLog from '../ui/GameLog';
@@ -32,6 +34,8 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
   const [isGameStarting, setIsGameStarting] = useState(false); // 游戏是否正在启动
   const [showEmojiPicker, setShowEmojiPicker] = useState(false); // 表情选择器
   const [floatingEmojis, setFloatingEmojis] = useState([]); // 飘浮的表情动画
+  const [sessionHistory, setSessionHistory] = useState([]); // 本次游戏的回合历史
+  const [gameStartTime, setGameStartTime] = useState(null); // 游戏开始时间
 
   const engineRef = useRef(null);
   const isHost = room?.hostId === user.userId;
@@ -62,6 +66,9 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
           console.log('[联机游戏] 房主初始化游戏状态...');
           await engineRef.current.initGame(roomData);
           console.log('[联机游戏] 游戏状态初始化完成');
+          setGameStartTime(Date.now()); // 记录游戏开始时间
+        } else {
+          setGameStartTime(Date.now()); // 非房主也记录开始时间
         }
 
         unsubscribe = engineRef.current.subscribeToGameState((state) => {
@@ -298,6 +305,36 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
     // 是否摊牌
     const isShowdown = result.playerHands && Object.keys(result.playerHands).length > 0;
 
+    // 摊牌时记录牌面快照
+    let showdown = null;
+    if (isShowdown) {
+      showdown = {
+        community: state.communityCards.map(c => c.id),
+        players: state.players
+          .filter(p => !p.folded)
+          .map(p => ({
+            id: p.id,
+            name: p.name,
+            avatar: p.avatar,
+            hand: p.hand.map(c => c.id),
+            handName: result.playerHands[p.id]?.name || '',
+            isWinner: winnerIds.includes(p.id)
+          }))
+      };
+    }
+
+    // 记录本回合历史
+    const roundRecord = {
+      round: state.roundsPlayed,
+      winners: result.winners,
+      winnerNames,
+      bestHand: result.bestHand || '',
+      playerChips: state.players.map(p => ({ id: p.id, name: p.name, chips: p.chips })),
+      showdown
+    };
+
+    setSessionHistory(prev => [...prev, roundRecord]);
+
     const iWon = winnerIds.includes(user.userId);
     const profit = result.winners[user.userId] || 0;
 
@@ -380,6 +417,40 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
   const handleExit = async () => {
     if (!confirm('确定要退出游戏吗？你的筹码将丢失。')) {
       return;
+    }
+
+    // 保存整局记录到用户历史
+    if (gameState && sessionHistory.length > 0 && gameStartTime) {
+      const myPlayer = gameState.players.find(p => p.id === user.userId);
+      const initialChips = room?.settings?.initialChips || 1000;
+      const duration = Math.floor((Date.now() - gameStartTime) / 1000);
+
+      const gameRecord = {
+        id: uuidv4(),
+        playedAt: new Date().toISOString(),
+        mode: 'online', // 标记为联机模式
+        result: myPlayer.chips > initialChips ? 'win' : 'lose',
+        playersCount: gameState.players.length,
+        initialChips: initialChips,
+        finalChips: myPlayer.chips,
+        profit: myPlayer.chips - initialChips,
+        roundsPlayed: sessionHistory.length,
+        bestHand: sessionHistory.map(r => r.bestHand).filter(Boolean).pop() || '',
+        durationSeconds: duration,
+        roomId: roomId,
+        // 摊牌回合快照（用于历史详情查看亮牌）
+        showdowns: sessionHistory
+          .filter(r => r.showdown)
+          .map(r => ({
+            round: r.round,
+            community: r.showdown.community,
+            players: r.showdown.players,
+            winnerNames: r.winnerNames
+          }))
+      };
+
+      addGameHistory(user.userId, gameRecord);
+      console.log('[联机游戏] 游戏历史已保存:', gameRecord);
     }
 
     try {
