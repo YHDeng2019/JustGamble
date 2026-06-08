@@ -29,13 +29,14 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
   const [allInFlash, setAllInFlash] = useState(null);
   const [yourTurn, setYourTurn] = useState(false);
   const [thinkingAi, setThinkingAi] = useState(null);
-  const [dealingCards, setDealingCards] = useState(0); // 已发出的牌数（动画用）
-  const [dealingComplete, setDealingComplete] = useState(false); // 发牌是否完成
-  const [isGameStarting, setIsGameStarting] = useState(false); // 游戏是否正在启动
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false); // 表情选择器
-  const [floatingEmojis, setFloatingEmojis] = useState([]); // 飘浮的表情动画
-  const [sessionHistory, setSessionHistory] = useState([]); // 本次游戏的回合历史
-  const [gameStartTime, setGameStartTime] = useState(null); // 游戏开始时间
+  const [dealingCards, setDealingCards] = useState(0);
+  const [dealingComplete, setDealingComplete] = useState(false);
+  const [isGameStarting, setIsGameStarting] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [floatingEmojis, setFloatingEmojis] = useState([]);
+  const [sessionHistory, setSessionHistory] = useState([]);
+  const [gameStartTime, setGameStartTime] = useState(null);
+  const [showHandGuide, setShowHandGuide] = useState(false); // 牌型说明弹窗
 
   const engineRef = useRef(null);
   const isHost = room?.hostId === user.userId;
@@ -146,15 +147,10 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
 
     loadRoom();
 
-    // 网络状态检测 - 暂时禁用，避免误报
+    // 连接状态检测：15秒无数据=重连中，30秒=断开
     lastUpdateTimeRef.current = Date.now();
-    setConnectionStatus('connected');
-
-    // 注释掉连接检测，等稳定后再启用
-    /*
     const connectionCheck = setInterval(() => {
       const timeSinceLastUpdate = Date.now() - lastUpdateTimeRef.current;
-
       if (timeSinceLastUpdate > 30000) {
         setConnectionStatus('disconnected');
       } else if (timeSinceLastUpdate > 15000) {
@@ -162,11 +158,10 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
       } else {
         setConnectionStatus('connected');
       }
-    }, 3000);
-    */
+    }, 5000);
 
     return () => {
-      // clearInterval(connectionCheck);
+      clearInterval(connectionCheck);
       if (unsubscribe) {
         unsubscribe();
       }
@@ -605,6 +600,13 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
               {soundEnabled ? 'ON' : 'OFF'}
             </span>
           </div>
+          <div
+            className="settings-menu-item"
+            onClick={() => { setShowHandGuide(true); setShowSettingsMenu(false); }}
+          >
+            <span className="settings-menu-icon">🃏</span>
+            <span className="settings-menu-label">牌型说明</span>
+          </div>
         </div>,
         document.body
       )}
@@ -672,7 +674,41 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
         onToggle={() => setLogCollapsed(!logCollapsed)}
       />
 
-      <div className="game-version">v2026.06.06-online</div>
+      <div className="game-version">v2026.06.08-online</div>
+
+      {/* 牌型说明弹窗 */}
+      {showHandGuide && (
+        <div className="hand-guide-overlay" onClick={() => setShowHandGuide(false)}>
+          <div className="hand-guide-modal" onClick={e => e.stopPropagation()}>
+            <div className="hand-guide-header">
+              <h3>🃏 牌型大小（从大到小）</h3>
+              <button className="hand-guide-close" onClick={() => setShowHandGuide(false)}>✕</button>
+            </div>
+            <div className="hand-guide-list">
+              {[
+                { rank: 1, name: '皇家同花顺', desc: 'A K Q J 10 同花色', example: '♠A ♠K ♠Q ♠J ♠10' },
+                { rank: 2, name: '同花顺', desc: '五张连续同花色', example: '♥9 ♥8 ♥7 ♥6 ♥5' },
+                { rank: 3, name: '四条', desc: '四张相同点数', example: '♠K ♥K ♦K ♣K ♠A' },
+                { rank: 4, name: '葫芦', desc: '三条 + 一对', example: '♠Q ♥Q ♦Q ♣J ♠J' },
+                { rank: 5, name: '同花', desc: '五张同花色', example: '♦A ♦J ♦8 ♦5 ♦2' },
+                { rank: 6, name: '顺子', desc: '五张连续不同花', example: '♠9 ♥8 ♦7 ♣6 ♠5' },
+                { rank: 7, name: '三条', desc: '三张相同点数', example: '♠7 ♥7 ♦7 ♣K ♠A' },
+                { rank: 8, name: '两对', desc: '两个不同的对子', example: '♠A ♥A ♦K ♣K ♠Q' },
+                { rank: 9, name: '一对', desc: '两张相同点数', example: '♠J ♥J ♦A ♣K ♠Q' },
+                { rank: 10, name: '高牌', desc: '以最大单张比较', example: '♠A ♦K ♥J ♣8 ♠5' },
+              ].map(h => (
+                <div key={h.rank} className="hand-guide-row">
+                  <span className="hand-guide-rank">#{h.rank}</span>
+                  <span className="hand-guide-name">{h.name}</span>
+                  <span className="hand-guide-desc">{h.desc}</span>
+                  <span className="hand-guide-example">{h.example}</span>
+                </div>
+              ))}
+            </div>
+            <p className="hand-guide-tip">点击任意位置关闭</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

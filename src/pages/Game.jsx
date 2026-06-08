@@ -35,6 +35,7 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
   const [allInFlash, setAllInFlash] = useState(null); // ALL IN 戏剧效果（玩家名）
   const [yourTurn, setYourTurn] = useState(false); // 是否轮到人类玩家（用于提示）
   const [showSettingsMenu, setShowSettingsMenu] = useState(false); // 设置下拉菜单
+  const [showHandGuide, setShowHandGuide] = useState(false); // 牌型说明弹窗
   const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 }); // 下拉菜单位置
   const countdownRef = React.useRef(null);
   const gameRef = React.useRef(null); // 始终指向当前引擎实例，避免 state 闭包陷阱
@@ -740,6 +741,13 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
               {soundEnabled ? 'ON' : 'OFF'}
             </span>
           </div>
+          <div
+            className="settings-menu-item"
+            onClick={() => { setShowHandGuide(true); setShowSettingsMenu(false); }}
+          >
+            <span className="settings-menu-icon">🃏</span>
+            <span className="settings-menu-label">牌型说明</span>
+          </div>
         </div>,
         document.body
       )}
@@ -897,8 +905,42 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
 
       {/* 版本标记 - 用于确认代码更新 */}
       <div style={{position: 'fixed', bottom: '5px', right: '5px', fontSize: '10px', color: '#666', zIndex: 9999}}>
-        v2026.06.06-fix7
+        v2026.06.08-fix8
       </div>
+
+      {/* 牌型说明弹窗 */}
+      {showHandGuide && (
+        <div className="hand-guide-overlay" onClick={() => setShowHandGuide(false)}>
+          <div className="hand-guide-modal" onClick={e => e.stopPropagation()}>
+            <div className="hand-guide-header">
+              <h3>🃏 牌型大小（从大到小）</h3>
+              <button className="hand-guide-close" onClick={() => setShowHandGuide(false)}>✕</button>
+            </div>
+            <div className="hand-guide-list">
+              {[
+                { rank: 1, name: '皇家同花顺', desc: 'A K Q J 10 同花色', example: '♠A ♠K ♠Q ♠J ♠10' },
+                { rank: 2, name: '同花顺', desc: '五张连续同花色', example: '♥9 ♥8 ♥7 ♥6 ♥5' },
+                { rank: 3, name: '四条', desc: '四张相同点数', example: '♠K ♥K ♦K ♣K ♠A' },
+                { rank: 4, name: '葫芦', desc: '三条 + 一对', example: '♠Q ♥Q ♦Q ♣J ♠J' },
+                { rank: 5, name: '同花', desc: '五张同花色', example: '♦A ♦J ♦8 ♦5 ♦2' },
+                { rank: 6, name: '顺子', desc: '五张连续不同花', example: '♠9 ♥8 ♦7 ♣6 ♠5' },
+                { rank: 7, name: '三条', desc: '三张相同点数', example: '♠7 ♥7 ♦7 ♣K ♠A' },
+                { rank: 8, name: '两对', desc: '两个不同的对子', example: '♠A ♥A ♦K ♣K ♠Q' },
+                { rank: 9, name: '一对', desc: '两张相同点数', example: '♠J ♥J ♦A ♣K ♠Q' },
+                { rank: 10, name: '高牌', desc: '以最大单张比较', example: '♠A ♦K ♥J ♣8 ♠5' },
+              ].map(h => (
+                <div key={h.rank} className="hand-guide-row">
+                  <span className="hand-guide-rank">#{h.rank}</span>
+                  <span className="hand-guide-name">{h.name}</span>
+                  <span className="hand-guide-desc">{h.desc}</span>
+                  <span className="hand-guide-example">{h.example}</span>
+                </div>
+              ))}
+            </div>
+            <p className="hand-guide-tip">点击任意位置关闭</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

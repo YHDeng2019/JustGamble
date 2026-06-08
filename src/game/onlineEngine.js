@@ -236,6 +236,14 @@ export class OnlineGameEngine {
       this.engine.smallBlind = serverState.smallBlind;
     }
 
+    // 同步摊牌结果（非房主需要这个数据来显示牌型和获胜者信息）
+    if (serverState.lastShowdownResult) {
+      this.engine.lastShowdownResult = serverState.lastShowdownResult;
+    } else if (serverState.stage !== 'RESULT') {
+      // 非 RESULT 阶段时清除旧结果
+      this.engine.lastShowdownResult = null;
+    }
+
     // 如果是房主，立即检查 AI 和超时
     if (this.isHost) {
       console.log('[联机引擎] 房主立即触发检查');
@@ -573,10 +581,14 @@ export class OnlineGameEngine {
           const newState = this.engine.getGameState();
           const nextSequence = (this.lastProcessedSequence || 0) + 1;
 
+          // 如果到了 RESULT 阶段，把摊牌结果也一起推送（非房主需要它来显示牌型）
+          const showdownResult = this.engine.lastShowdownResult || null;
+
           await update(ref(db, `rooms/${this.roomId}/gameState`), {
             ...newState,
             lastUpdate: Date.now(),
-            sequence: nextSequence
+            sequence: nextSequence,
+            ...(showdownResult ? { lastShowdownResult: showdownResult } : {})
           });
 
           console.log('[联机引擎] 游戏阶段已推进:', newState.stage);
@@ -598,10 +610,13 @@ export class OnlineGameEngine {
       const newState = this.engine.getGameState();
       const nextSequence = (this.lastProcessedSequence || 0) + 1;
 
+      const showdownResult = this.engine.lastShowdownResult || null;
+
       await update(ref(db, `rooms/${this.roomId}/gameState`), {
         ...newState,
         lastUpdate: Date.now(),
-        sequence: nextSequence
+        sequence: nextSequence,
+        ...(showdownResult ? { lastShowdownResult: showdownResult } : {})
       });
 
       console.log('[联机引擎] 快速摊牌推进:', newState.stage);

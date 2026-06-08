@@ -291,3 +291,131 @@
 .stealth-mode .floating-emoji-text {
   color: #000000;
 }
+
+/* 牌型说明弹窗 */
+.hand-guide-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+
+.hand-guide-modal {
+  background: #1a1a2e;
+  border: 2px solid var(--accent);
+  border-radius: 16px;
+  padding: 1.5rem;
+  max-width: 600px;
+  width: 90%;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.8);
+}
+
+.hand-guide-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.hand-guide-header h3 {
+  font-size: 1.2rem;
+  color: var(--accent);
+  margin: 0;
+}
+
+.hand-guide-close {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: color 0.2s;
+}
+
+.hand-guide-close:hover {
+  color: white;
+}
+
+.hand-guide-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.hand-guide-row {
+  display: grid;
+  grid-template-columns: 2rem 5rem 1fr auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.hand-guide-row:nth-child(1) { border-left: 3px solid #ffd700; }
+.hand-guide-row:nth-child(2) { border-left: 3px solid #ff6b6b; }
+.hand-guide-row:nth-child(3) { border-left: 3px solid #ff9f43; }
+.hand-guide-row:nth-child(4) { border-left: 3px solid #ee5a24; }
+.hand-guide-row:nth-child(5) { border-left: 3px solid #a29bfe; }
+.hand-guide-row:nth-child(6) { border-left: 3px solid #74b9ff; }
+.hand-guide-row:nth-child(7) { border-left: 3px solid #55efc4; }
+.hand-guide-row:nth-child(8) { border-left: 3px solid #00b894; }
+.hand-guide-row:nth-child(9) { border-left: 3px solid #636e72; }
+.hand-guide-row:nth-child(10) { border-left: 3px solid #535c68; }
+
+.hand-guide-rank {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.hand-guide-name {
+  font-weight: bold;
+  font-size: 0.95rem;
+  color: white;
+}
+
+.hand-guide-desc {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.hand-guide-example {
+  font-size: 0.8rem;
+  color: #ffd700;
+  font-family: monospace;
+  white-space: nowrap;
+}
+
+.hand-guide-tip {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  margin-top: 1rem;
+}
+
+/* 摸鱼模式 */
+.stealth-mode .hand-guide-overlay {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.stealth-mode .hand-guide-modal {
+  background: white;
+  border: 2px solid #000;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+
+.stealth-mode .hand-guide-header h3 { color: #000; }
+.stealth-mode .hand-guide-name { color: #000; }
+.stealth-mode .hand-guide-desc { color: #666; }
+.stealth-mode .hand-guide-example { color: #333; }
+.stealth-mode .hand-guide-row { background: #f5f5f5; border-color: #ddd; }
