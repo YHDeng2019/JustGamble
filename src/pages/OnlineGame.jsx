@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import { OnlineGameEngine } from '../game/onlineEngine';
 import { getRoom, leaveRoom } from '../services/roomService';
 import { startHeartbeat, stopHeartbeat } from '../services/heartbeatService';
+import { EMOJIS, sendEmoji, subscribeToEmojis } from '../services/emojiService';
 import { describeCurrentHand } from '../game/handEval';
 import { GAME_STAGES } from '../game/engine';
 import Table from '../ui/Table';
@@ -26,6 +27,11 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
   const [allInFlash, setAllInFlash] = useState(null);
   const [yourTurn, setYourTurn] = useState(false);
   const [thinkingAi, setThinkingAi] = useState(null);
+  const [dealingCards, setDealingCards] = useState(0); // 已发出的牌数（动画用）
+  const [dealingComplete, setDealingComplete] = useState(false); // 发牌是否完成
+  const [isGameStarting, setIsGameStarting] = useState(false); // 游戏是否正在启动
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false); // 表情选择器
+  const [floatingEmojis, setFloatingEmojis] = useState([]); // 飘浮的表情动画
 
   const engineRef = useRef(null);
   const isHost = room?.hostId === user.userId;
@@ -62,11 +68,26 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
           console.log('[联机游戏] 收到游戏状态更新:', state.stage, '当前玩家索引:', state.currentPlayerIndex);
           console.log('[联机游戏] gameLog:', state.gameLog);
 
+          // 检测游戏首次启动（从 DEALING 阶段进入）
+          if (!isGameStarting && state.stage === GAME_STAGES.DEALING && state.players.every(p => p.hand && p.hand.length === 2)) {
+            console.log('[联机游戏] 检测到游戏启动，开始发牌动画');
+            setIsGameStarting(true);
+            animateDealing(state.players.length);
+            return; // 先不更新 gameState，等动画完成
+          }
+
           setGameState(state);
 
           // 检测阶段变化
           if (prevStageRef.current && prevStageRef.current !== state.stage) {
             console.log('[联机游戏] 阶段切换:', prevStageRef.current, '→', state.stage);
+
+            // 阶段切换时增加停顿，让玩家看清公共牌
+            if (state.stage === GAME_STAGES.FLOP ||
+                state.stage === GAME_STAGES.TURN ||
+                state.stage === GAME_STAGES.RIVER) {
+              playSound('flip', !soundEnabled);
+            }
           }
           prevStageRef.current = state.stage;
 
@@ -91,6 +112,25 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
         });
 
         startHeartbeat(roomId, user.userId);
+
+        // 订阅房间表情
+        const unsubscribeEmojis = subscribeToEmojis(roomId, (emoji) => {
+          // 显示飘浮表情动画
+          const newEmoji = {
+            id: Date.now() + Math.random(),
+            ...emoji
+          };
+          setFloatingEmojis(prev => [...prev, newEmoji]);
+
+          // 3秒后移除
+          setTimeout(() => {
+            setFloatingEmojis(prev => prev.filter(e => e.id !== newEmoji.id));
+          }, 3000);
+        });
+
+        return () => {
+          if (unsubscribeEmojis) unsubscribeEmojis();
+        };
       } catch (err) {
         console.error('[联机游戏] 初始化失败:', err);
         setError('游戏初始化失败: ' + err.message);
@@ -181,6 +221,29 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
 
     wasMyTurnRef.current = isMyTurn;
   }, [gameState, roundToast, soundEnabled, user.userId, yourTurn]);
+
+  // 发牌动画
+  const animateDealing = (playerCount) => {
+    const totalCards = playerCount * 2;
+    let dealt = 0;
+    setDealingCards(0);
+    setDealingComplete(false);
+
+    const dealInterval = setInterval(() => {
+      dealt++;
+      setDealingCards(dealt);
+      playSound('deal', !soundEnabled);
+      if (dealt >= totalCards) {
+        clearInterval(dealInterval);
+        setTimeout(() => {
+          setDealingCards(totalCards);
+          setDealingComplete(true);
+          setIsGameStarting(false);
+          // 动画完成后更新状态，触发游戏继续
+        }, 400);
+      }
+    }, 150);
+  };
 
   const updateActionBarVisibility = (state) => {
     if (!state) return;
@@ -328,6 +391,15 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
     }
   };
 
+  const handleSendEmoji = async (emojiId) => {
+    try {
+      await sendEmoji(roomId, user.userId, user.displayName, emojiId);
+      setShowEmojiPicker(false);
+    } catch (err) {
+      console.error('[联机游戏] 发送表情失败:', err);
+    }
+  };
+
   if (error) {
     return (
       <div className="page-container">
@@ -374,6 +446,17 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
         <button className="btn btn-small" onClick={handleExit}>退出</button>
         <h2>JustGamble</h2>
         <span className="round-indicator">第 {gameState.roundsPlayed} 局</span>
+
+        {/* 表情按钮 */}
+        <button
+          className="btn btn-icon emoji-btn"
+          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+          title="发送表情"
+          style={{ marginLeft: '0.5rem' }}
+        >
+          😊
+        </button>
+
         <div className="settings-dropdown">
           <button
             ref={buttonRef}
@@ -385,6 +468,40 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
           </button>
         </div>
       </div>
+
+      {/* 表情选择器 */}
+      {showEmojiPicker && (
+        <div className="emoji-picker">
+          {EMOJIS.map(emoji => (
+            <button
+              key={emoji.id}
+              className="emoji-option"
+              onClick={() => handleSendEmoji(emoji.id)}
+              title={emoji.text}
+            >
+              <span className="emoji-icon">{emoji.emoji}</span>
+              <span className="emoji-label">{emoji.text}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* 飘浮表情动画 */}
+      {floatingEmojis.map(emoji => (
+        <div
+          key={emoji.id}
+          className="floating-emoji"
+          style={{
+            left: `${20 + Math.random() * 60}%`,
+            animationDuration: `${2 + Math.random()}s`
+          }}
+        >
+          <div className="floating-emoji-content">
+            <span className="floating-emoji-icon">{emoji.emoji}</span>
+            <span className="floating-emoji-text">{emoji.userName}: {emoji.text}</span>
+          </div>
+        </div>
+      ))}
 
       {showSettingsMenu && ReactDOM.createPortal(
         <div
@@ -448,7 +565,7 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
         thinkingAi={thinkingAi}
         totalPlayers={gameState.players.length}
         winnerHighlight={winnerHighlight}
-        dealingCards={undefined}
+        dealingCards={dealingCards}
         stealthMode={stealthMode}
         allInFlash={allInFlash}
       />
