@@ -258,14 +258,42 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
   };
 
   const updateActionBarVisibility = (state) => {
-    if (!state) return;
+    if (!state || !state.players || state.players.length === 0) {
+      console.warn('[联机游戏] updateActionBarVisibility: 状态无效', state);
+      return;
+    }
+
+    // 摊牌/结算阶段不显示操作栏
+    if (state.stage === GAME_STAGES.RESULT || state.stage === GAME_STAGES.SHOWDOWN) {
+      setActionBarVisible(false);
+      setActionBarReady(false);
+      return;
+    }
 
     const currentPlayer = state.players[state.currentPlayerIndex];
-    const isMyTurn = currentPlayer?.id === user.userId;
+    if (!currentPlayer) {
+      console.warn('[联机游戏] 当前玩家不存在', {
+        currentPlayerIndex: state.currentPlayerIndex,
+        playersLength: state.players.length
+      });
+      return;
+    }
+
+    const isMyTurn = currentPlayer.id === user.userId;
     const canAct = isMyTurn &&
                    !currentPlayer.folded &&
                    !currentPlayer.allIn &&
                    currentPlayer.chips > 0; // 筹码为0不能操作
+
+    console.log('[联机游戏] ActionBar 可见性检查:', {
+      isMyTurn,
+      canAct,
+      currentPlayer: currentPlayer.name,
+      folded: currentPlayer.folded,
+      allIn: currentPlayer.allIn,
+      chips: currentPlayer.chips,
+      stage: state.stage
+    });
 
     if (canAct) {
       // 短暂延迟后显示 ActionBar，避免连续决策时无间隔
@@ -536,13 +564,15 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
         <button className="btn btn-small" onClick={handleExit}>退出</button>
         <h2>JustGamble</h2>
         <span className="round-indicator">第 {gameState.roundsPlayed} 局</span>
+      </div>
 
+      {/* 右上角操作按钮组 */}
+      <div className="top-right-controls">
         {/* 表情按钮 */}
         <button
           className="btn btn-icon emoji-btn"
           onClick={() => setShowEmojiPicker(!showEmojiPicker)}
           title="发送表情"
-          style={{ marginLeft: '0.5rem' }}
         >
           😊
         </button>
@@ -552,7 +582,6 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
           className="btn btn-icon chat-btn"
           onClick={() => setShowChatBox(!showChatBox)}
           title="聊天"
-          style={{ marginLeft: '0.5rem' }}
         >
           💬
         </button>
@@ -677,7 +706,7 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
         allInFlash={allInFlash}
       />
 
-      {actionBarVisible && actionBarReady && (
+      {actionBarVisible && actionBarReady && dealingComplete && (
         <>
           <div className="hand-hint">
             <span className={`your-turn-tag ${yourTurn ? 'pulse' : ''}`}>● 轮到你了</span>

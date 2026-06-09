@@ -380,6 +380,27 @@
   box-shadow: 0 2px 8px rgba(230, 126, 34, 0.5);
 }
 
+/* 离线标记 */
+.offline-badge {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  background: rgba(192, 57, 43, 0.95);
+  color: white;
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.65rem;
+  font-weight: bold;
+  z-index: 26;
+  box-shadow: 0 2px 8px rgba(192, 57, 43, 0.5);
+  animation: pulseBadge 1.5s ease-in-out infinite;
+}
+
+@keyframes pulseBadge {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
 /* 摊牌牌型标签 */
 .hand-name-badge {
   margin-top: 0.3rem;

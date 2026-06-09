@@ -146,6 +146,7 @@ export class GameEngine {
   getValidActions() {
     const player = this.getCurrentPlayer();
     const toCall = this.getAmountToCall(player);
+    const maxBet = Math.max(...this.players.map(p => p.bet));
     const minRaise = Math.max(this.lastRaise, this.bigBlind);
     const maxRaise = player.chips + player.bet;
 
@@ -163,10 +164,12 @@ export class GameEngine {
     }
 
     if (player.chips > 0) {
+      // 最小加注 = 当前最高下注 + 最小加注额
+      const minRaiseAmount = maxBet + minRaise;
       actions.push({
         action: 'raise',
         label: '加注',
-        min: Math.min(player.bet + minRaise, maxRaise),
+        min: Math.min(minRaiseAmount, maxRaise),
         max: maxRaise
       });
     }
@@ -217,8 +220,8 @@ export class GameEngine {
           this.placeBet(this.currentPlayerIndex, toCall);
           this.addLog(player.name, `跟注 ${toCall}`, 'gold');
         } else {
-          // 真正的加注
-          const raiseAmount = amount - player.bet;
+          // 真正的加注：记录本轮加注额（超出当前最高下注的部分）
+          const raiseAmount = amount - maxBet;
           this.lastRaise = raiseAmount;
           this.placeBet(this.currentPlayerIndex, amount);
           this.addLog(player.name, `加注到 ${amount}`, 'gold');

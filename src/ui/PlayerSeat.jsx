@@ -54,6 +54,7 @@ const PlayerSeat = ({ player, isCurrent, isDealer, position, aiType, isThinking,
     <div className={seatClass}>
       {isDealer && <div className="dealer-btn">D</div>}
       {blindLabel && <div className={`blind-btn blind-${blindLabel.toLowerCase()}`}>{blindLabel}</div>}
+      {player.isOffline && <div className="offline-badge">已离线</div>}
 
       {actionToast && (
         <div className={`action-toast toast-${actionToast.type}`}>

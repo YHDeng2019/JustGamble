@@ -458,6 +458,43 @@ export class OnlineGameEngine {
       return;
     }
 
+    // 检测玩家是否离线（通过房间数据的心跳检测）
+    const roomRef = ref(db, `rooms/${this.roomId}/players/${currentPlayer.id}`);
+    const roomSnapshot = await get(roomRef);
+    const roomPlayer = roomSnapshot.val();
+
+    if (roomPlayer && !isPlayerOnline(roomPlayer)) {
+      console.log(`[联机引擎] 玩家 ${currentPlayer.name} 已离线，标记并自动弃牌`);
+
+      // 标记玩家离线
+      this.engine.executeAction('fold', 0);
+      const newState = this.engine.getGameState();
+
+      // 在游戏状态中标记该玩家为离线
+      const playerIndex = newState.players.findIndex(p => p.id === currentPlayer.id);
+      if (playerIndex !== -1) {
+        newState.players[playerIndex].isOffline = true;
+      }
+
+      const nextSequence = (this.lastProcessedSequence || 0) + 1;
+
+      await update(ref(db, `rooms/${this.roomId}/gameState`), {
+        ...newState,
+        lastUpdate: Date.now(),
+        sequence: nextSequence,
+        lastAction: {
+          userId: currentPlayer.id,
+          action: 'fold',
+          amount: 0,
+          timestamp: Date.now(),
+          offline: true
+        }
+      });
+
+      this.engine.addLog(currentPlayer.name, '已离线', 'muted');
+      return;
+    }
+
     // 清除旧的超时计时器
     if (this.turnTimeouts.has(currentPlayer.id)) {
       clearTimeout(this.turnTimeouts.get(currentPlayer.id));
