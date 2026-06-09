@@ -936,9 +936,13 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
                   <span className="hand-guide-example">
                     {h.example.split(' ').map((card, i) => {
                       const suit = card[0];
-                      const isRed = suit === '♥' || suit === '♦';
+                      let color = '#2c3e50'; // 默认黑色
+                      if (suit === '♠') color = '#34495e';      // 黑桃：深灰色
+                      else if (suit === '♥') color = '#e74c3c'; // 红桃：红色
+                      else if (suit === '♦') color = '#3498db'; // 方块：蓝色
+                      else if (suit === '♣') color = '#27ae60'; // 梅花：绿色
                       return (
-                        <span key={i} style={{ color: isRed ? '#e74c3c' : '#2c3e50', marginRight: '0.3rem' }}>
+                        <span key={i} style={{ color, marginRight: '0.3rem', fontWeight: '600' }}>
                           {card}
                         </span>
                       );
