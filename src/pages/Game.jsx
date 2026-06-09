@@ -339,7 +339,7 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
       // 延迟后重新检查：当前玩家是否还是这个 AI（防止延迟期间用户已操作，轮次已变）
       const nowPlayer = gameRef.current.getCurrentPlayer();
       if (!nowPlayer || nowPlayer.id !== currentPlayer.id || nowPlayer.folded) {
-        debugLog.log(`AI 决策取消：延迟后轮次已变 (预期 ${currentPlayer.name}, 实际 ${nowPlayer?.name || 'null'})`);
+        debugLog.add('AI_DECISION_CANCEL', `延迟后轮次已变 (预期 ${currentPlayer.name}, 实际 ${nowPlayer?.name || 'null'})`);
         return;
       }
 
