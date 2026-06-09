@@ -49,7 +49,11 @@ export const setSoundEnabled = (enabled) => {
 // ============ 合成音效辅助 ============
 const tone = (freq, duration, type = 'sine', gainPeak = 0.15, delay = 0) => {
   const ctx = getCtx();
-  if (!ctx) return;
+  if (!ctx) {
+    console.error('[音效] AudioContext未初始化');
+    return;
+  }
+  console.log(`[音效] 播放tone: freq=${freq}, duration=${duration}, type=${type}, ctx.state=${ctx.state}`);
   const now = ctx.currentTime + delay;
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
@@ -66,7 +70,11 @@ const tone = (freq, duration, type = 'sine', gainPeak = 0.15, delay = 0) => {
 
 const sweep = (freqStart, freqEnd, duration, type = 'sine', gainPeak = 0.15, delay = 0) => {
   const ctx = getCtx();
-  if (!ctx) return;
+  if (!ctx) {
+    console.error('[音效] AudioContext未初始化');
+    return;
+  }
+  console.log(`[音效] 播放sweep: ${freqStart}->${freqEnd}, duration=${duration}, ctx.state=${ctx.state}`);
   const now = ctx.currentTime + delay;
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
@@ -245,10 +253,21 @@ export const sfx = {
 
 // 统一播放入口：尊重静音设置
 export const playSound = (name, muted = false) => {
-  if (muted || !isSoundEnabled()) return;
+  console.log(`[音效] playSound调用: name=${name}, muted=${muted}, isSoundEnabled=${isSoundEnabled()}`);
+  if (muted || !isSoundEnabled()) {
+    console.log(`[音效] 音效被静音或关闭，跳过播放`);
+    return;
+  }
   const fn = sfx[name];
   if (fn) {
-    try { fn(); } catch { /* ignore */ }
+    try {
+      console.log(`[音效] 播放音效: ${name}`);
+      fn();
+    } catch (e) {
+      console.error(`[音效] 播放失败:`, e);
+    }
+  } else {
+    console.warn(`[音效] 未找到音效: ${name}`);
   }
 };
 
