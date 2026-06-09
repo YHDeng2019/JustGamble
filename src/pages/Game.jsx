@@ -644,7 +644,7 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
     setShowSettlement(true);
   };
 
-  const getValidActions = () => {
+  const getValidActions = useCallback(() => {
     const game = gameRef.current;
     if (!game || !gameState) return [];
     if (gameState.stage === GAME_STAGES.WAITING ||
@@ -652,10 +652,10 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
         gameState.stage === GAME_STAGES.DEALING) return [];
 
     const currentPlayer = game.getCurrentPlayer();
-    if (!currentPlayer.isHuman) return [];
+    if (!currentPlayer || !currentPlayer.isHuman) return [];
 
     return game.getValidActions();
-  };
+  }, [gameState]);
 
   // 计算各玩家总收支
   const getPlayerStats = () => {
