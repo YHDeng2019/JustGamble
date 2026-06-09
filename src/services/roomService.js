@@ -225,6 +225,52 @@ export const addBot = async (roomId, personality) => {
 };
 
 /**
+ * 踢出玩家（仅房主可用）
+ */
+export const kickPlayer = async (roomId, hostId, targetUserId) => {
+  const db = getFirebaseDB();
+  const roomRef = ref(db, `rooms/${roomId}`);
+  const snapshot = await get(roomRef);
+
+  if (!snapshot.exists()) {
+    throw new Error('房间不存在');
+  }
+
+  const room = snapshot.val();
+
+  // 验证是否为房主
+  if (room.hostId !== hostId) {
+    throw new Error('只有房主可以踢人');
+  }
+
+  // 不能踢自己
+  if (targetUserId === hostId) {
+    throw new Error('不能踢出自己');
+  }
+
+  // 游戏开始后不能踢人
+  if (room.status !== 'waiting') {
+    throw new Error('游戏已开始，无法踢人');
+  }
+
+  // 移除玩家
+  await remove(ref(db, `rooms/${roomId}/players/${targetUserId}`));
+
+  const remainingPlayers = Object.keys(room.players || {}).filter(id => id !== targetUserId);
+
+  // 更新公开房间列表
+  if (room.isPublic) {
+    await update(ref(db, `lobby/publicRooms/${roomId}`), {
+      playerCount: remainingPlayers.length
+    });
+  }
+
+  await update(roomRef, {
+    updatedAt: Date.now()
+  });
+};
+
+/**
  * 开始游戏
  */
 export const startGame = async (roomId) => {

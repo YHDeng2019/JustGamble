@@ -116,6 +116,46 @@
   }
 }
 
+/* 轮到你下注的花字提示 */
+.your-turn-notice {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+  font-size: 3rem;
+  font-weight: bold;
+  color: #FFD700;
+  text-shadow:
+    0 0 20px rgba(255, 215, 0, 0.8),
+    0 0 40px rgba(255, 215, 0, 0.6),
+    0 0 60px rgba(255, 215, 0, 0.4),
+    2px 2px 4px rgba(0, 0, 0, 0.8);
+  animation: yourTurnPop 2s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes yourTurnPop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+  40% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.95);
+  }
+}
+
 /* 游戏信息右侧布局 */
 .game-info-right {
   display: flex;
@@ -130,6 +170,13 @@
 }
 
 /* 摸鱼模式下的样式 */
+.stealth-mode .your-turn-notice {
+  color: #000000;
+  text-shadow:
+    0 0 5px rgba(0, 0, 0, 0.2),
+    1px 1px 2px rgba(255, 255, 255, 0.8);
+}
+
 .stealth-mode .connection-status {
   background: #ffffff !important;
   color: #000000 !important;

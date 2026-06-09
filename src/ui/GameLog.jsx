@@ -10,13 +10,17 @@ const GameLog = ({ logs, collapsed, onToggle }) => {
       
       {!collapsed && (
         <div className="log-content">
-          {logs.map((log, i) => (
-            <div key={i} className={`log-entry text-${log.color}`}>
-              <span className="log-time">[{log.time}]</span>
-              <span className="log-player">{log.player}:</span>
-              <span className="log-message">{log.message}</span>
-            </div>
-          ))}
+          {logs.map((log, i) => {
+            // 最新的两条日志高亮（日志数组是按时间顺序，最新的在最后）
+            const isRecent = i >= logs.length - 2;
+            return (
+              <div key={i} className={`log-entry text-${log.color} ${isRecent ? 'log-recent' : ''}`}>
+                <span className="log-time">[{log.time}]</span>
+                <span className="log-player">{log.player}:</span>
+                <span className="log-message">{log.message}</span>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

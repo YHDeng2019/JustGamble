@@ -9,9 +9,6 @@ const SelectUser = ({ onSelectUser }) => {
   const [step, setStep] = useState(1);
   const [newUserName, setNewUserName] = useState('');
   const [newUserAvatar, setNewUserAvatar] = useState('🎯');
-  const [newUserPin, setNewUserPin] = useState('');
-  const [pinChallenge, setPinChallenge] = useState(null);
-  const [pinInput, setPinInput] = useState('');
   const avatars = getAvatars();
 
   useEffect(() => {
@@ -19,25 +16,13 @@ const SelectUser = ({ onSelectUser }) => {
   }, []);
 
   const handleUserClick = (user) => {
-    if (user.pin) {
-      setPinChallenge(user);
-    } else {
-      selectUser(user);
-    }
+    selectUser(user);
   };
 
   const selectUser = (user) => {
     const loggedIn = loginUser(user.userId);
     setSessionUser(loggedIn);
     onSelectUser(loggedIn);
-  };
-
-  const verifyAndSelect = () => {
-    if (verifyPin(pinChallenge.userId, pinInput)) {
-      selectUser(pinChallenge);
-    } else {
-      alert('PIN 错误！');
-    }
   };
 
   const handleCreateUser = () => {
@@ -48,10 +33,9 @@ const SelectUser = ({ onSelectUser }) => {
 
     if (step === 1) {
       setStep(2);
-    } else if (step === 2) {
-      setStep(3);
     } else {
-      const user = createUser(newUserName, newUserAvatar, newUserPin);
+      // 直接创建用户，不需要PIN码
+      const user = createUser(newUserName, newUserAvatar, '');
       setUsers(getUsers());
       setShowCreate(false);
       setStep(1);
@@ -75,7 +59,7 @@ const SelectUser = ({ onSelectUser }) => {
     <div className="page-container">
       <h1 className="page-title">Texas Hold'em - JustGamble</h1>
       
-      {!showCreate && !pinChallenge && (
+      {!showCreate && (
         <div className="user-select">
           <h2>选择用户</h2>
           <div className="user-list">
@@ -103,26 +87,6 @@ const SelectUser = ({ onSelectUser }) => {
           <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
             + 新建用户
           </button>
-        </div>
-      )}
-
-      {pinChallenge && (
-        <div className="pin-modal">
-          <div className="card-panel">
-            <h3>输入 PIN 码</h3>
-            <p>用户: {pinChallenge.displayName}</p>
-            <input
-              type="password"
-              maxLength="4"
-              value={pinInput}
-              onChange={(e) => setPinInput(e.target.value)}
-              placeholder="4位数字PIN"
-            />
-            <div className="btn-group">
-              <button className="btn" onClick={() => setPinChallenge(null)}>取消</button>
-              <button className="btn btn-primary" onClick={verifyAndSelect}>确认</button>
-            </div>
-          </div>
         </div>
       )}
 
@@ -161,33 +125,7 @@ const SelectUser = ({ onSelectUser }) => {
               </div>
               <div className="btn-group">
                 <button className="btn" onClick={() => setStep(1)}>上一步</button>
-                <button className="btn btn-primary" onClick={handleCreateUser}>下一步</button>
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="create-step">
-              <label>设置 PIN 码 (可选)</label>
-              <input
-                type="password"
-                maxLength="4"
-                value={newUserPin}
-                onChange={(e) => setNewUserPin(e.target.value)}
-                placeholder="4位数字PIN (可选)"
-              />
-              <div className="btn-group">
-                <button className="btn" onClick={() => setStep(2)}>上一步</button>
                 <button className="btn btn-primary" onClick={handleCreateUser}>完成</button>
-                <button className="btn btn-success" onClick={() => {
-                  const user = createUser(newUserName, newUserAvatar, '');
-                  setUsers(getUsers());
-                  setShowCreate(false);
-                  setStep(1);
-                  selectUser(user);
-                }}>
-                  跳过
-                </button>
               </div>
             </div>
           )}

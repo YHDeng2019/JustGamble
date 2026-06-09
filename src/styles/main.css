@@ -476,6 +476,14 @@ body {
   border-bottom: 1px solid rgba(255, 215, 0, 0.05);
 }
 
+.log-entry.log-recent {
+  background: rgba(255, 215, 0, 0.1);
+  padding-left: 8px;
+  padding-right: 8px;
+  border-radius: 4px;
+  border-bottom: 1px solid rgba(255, 215, 0, 0.2);
+}
+
 .log-entry:last-child {
   border-bottom: none;
 }

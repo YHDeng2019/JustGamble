@@ -19,8 +19,9 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
   const [gameState, setGameState] = useState(null);
   const [actionBarVisible, setActionBarVisible] = useState(false);
   const [actionBarReady, setActionBarReady] = useState(false);
+  const [stageChangeTime, setStageChangeTime] = useState(null); // 记录阶段切换时间
   const [gameLog, setGameLog] = useState([]);
-  const [logCollapsed, setLogCollapsed] = useState(false);
+  const [logCollapsed, setLogCollapsed] = useState(true); // 默认收起
   const [error, setError] = useState('');
   const [connectionStatus, setConnectionStatus] = useState('connected');
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
@@ -29,6 +30,7 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
   const [roundToast, setRoundToast] = useState(null);
   const [allInFlash, setAllInFlash] = useState(null);
   const [yourTurn, setYourTurn] = useState(false);
+  const [showTurnNotice, setShowTurnNotice] = useState(false); // 花字提示
   const [thinkingAi, setThinkingAi] = useState(null);
   const [dealingCards, setDealingCards] = useState(0);
   const [dealingComplete, setDealingComplete] = useState(false);
@@ -99,6 +101,8 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
                 state.stage === GAME_STAGES.TURN ||
                 state.stage === GAME_STAGES.RIVER) {
               playSound('flip', !soundEnabled);
+              // 记录阶段切换时间，用于延迟显示决策界面
+              setStageChangeTime(Date.now());
             }
           }
           prevStageRef.current = state.stage;
@@ -227,6 +231,12 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
       // 刚转入我的回合
       setYourTurn(true);
       playSound('yourturn', !soundEnabled);
+
+      // 显示花字提示
+      setShowTurnNotice(true);
+      setTimeout(() => {
+        setShowTurnNotice(false);
+      }, 2000); // 2秒后淡出
     } else if (!isMyTurn && yourTurn) {
       setYourTurn(false);
     }
@@ -296,12 +306,21 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
     });
 
     if (canAct) {
-      // 短暂延迟后显示 ActionBar，避免连续决策时无间隔
+      // 计算延迟：如果刚发生阶段切换（翻牌/转牌/河牌），增加人性化等待时间
+      let delay = 600;
+      if (stageChangeTime) {
+        const timeSinceStageChange = Date.now() - stageChangeTime;
+        if (timeSinceStageChange < 2000) {
+          // 阶段切换后2秒内，增加额外延迟
+          delay = Math.max(600, 2000 - timeSinceStageChange);
+        }
+      }
+
       setActionBarVisible(true);
       setActionBarReady(false);
       setTimeout(() => {
         setActionBarReady(true);
-      }, 600);
+      }, delay);
     } else {
       setActionBarVisible(false);
       setActionBarReady(false);
@@ -691,6 +710,13 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
               </div>
             );
           })()}
+        </div>
+      )}
+
+      {/* 轮到你下注的花字提示 */}
+      {showTurnNotice && (
+        <div className="your-turn-notice">
+          轮到您下注
         </div>
       )}
 

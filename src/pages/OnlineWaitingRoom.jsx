@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { subscribeToRoom, leaveRoom, setPlayerReady, addBot, startGame } from '../services/roomService';
+import { subscribeToRoom, leaveRoom, setPlayerReady, addBot, startGame, kickPlayer } from '../services/roomService';
 import { startHeartbeat, stopHeartbeat } from '../services/heartbeatService';
 import { getPersonalities } from '../ai/personalities';
 
@@ -116,6 +116,22 @@ const OnlineWaitingRoom = ({ roomId, user, onGameStart, onBack }) => {
     }
   };
 
+  const handleKickPlayer = async (targetUserId, targetName) => {
+    if (!confirm(`确定要踢出玩家 ${targetName} 吗？`)) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await kickPlayer(roomId, user.userId, targetUserId);
+    } catch (err) {
+      console.error('[等待室] 踢出玩家失败:', err);
+      setError('踢出失败: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!room) {
     return (
       <div className="page-container">
@@ -192,6 +208,17 @@ const OnlineWaitingRoom = ({ roomId, user, onGameStart, onBack }) => {
                     {player.isReady ? '✅ 已准备' : '⏳ 未准备'}
                   </div>
                 </div>
+                {/* 房主可以踢出其他玩家 */}
+                {isHost && player.userId !== user.userId && (
+                  <button
+                    className="btn btn-danger btn-small kick-btn"
+                    onClick={() => handleKickPlayer(player.userId, player.displayName)}
+                    disabled={loading}
+                    title="踢出玩家"
+                  >
+                    ❌
+                  </button>
+                )}
               </div>
             ))}
 

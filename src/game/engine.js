@@ -289,6 +289,35 @@ export class GameEngine {
     }
     this.lastRaise = 0;
 
+    // 检测是否所有活跃玩家都all in（或只剩一个非all in玩家）
+    const activePlayers = this.players.filter(p => !p.folded);
+    const nonAllInPlayers = activePlayers.filter(p => !p.allIn);
+    const allInSituation = nonAllInPlayers.length <= 1;
+
+    if (allInSituation && this.stage !== GAME_STAGES.RIVER) {
+      // 所有人都all in了，直接发完所有公共牌并进入摊牌
+      this.addLog('系统', '所有玩家已all in，直接亮牌');
+
+      while (this.communityCards.length < 5) {
+        this.communityCards.push(dealCard(this.deck));
+      }
+
+      // 根据当前阶段补充日志
+      if (this.stage === GAME_STAGES.PRE_FLOP) {
+        this.addLog('系统', '翻牌：' + this.communityCards.slice(0, 3).map(c => c.id).join(' '));
+        this.addLog('系统', '转牌：' + this.communityCards[3].id);
+        this.addLog('系统', '河牌：' + this.communityCards[4].id);
+      } else if (this.stage === GAME_STAGES.FLOP) {
+        this.addLog('系统', '转牌：' + this.communityCards[3].id);
+        this.addLog('系统', '河牌：' + this.communityCards[4].id);
+      } else if (this.stage === GAME_STAGES.TURN) {
+        this.addLog('系统', '河牌：' + this.communityCards[4].id);
+      }
+
+      this.showdown();
+      return;
+    }
+
     switch (this.stage) {
       case GAME_STAGES.PRE_FLOP:
         this.stage = GAME_STAGES.FLOP;
