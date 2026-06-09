@@ -933,7 +933,17 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
                   <span className="hand-guide-rank">#{h.rank}</span>
                   <span className="hand-guide-name">{h.name}</span>
                   <span className="hand-guide-desc">{h.desc}</span>
-                  <span className="hand-guide-example">{h.example}</span>
+                  <span className="hand-guide-example">
+                    {h.example.split(' ').map((card, i) => {
+                      const suit = card[0];
+                      const isRed = suit === '♥' || suit === '♦';
+                      return (
+                        <span key={i} style={{ color: isRed ? '#e74c3c' : '#2c3e50', marginRight: '0.3rem' }}>
+                          {card}
+                        </span>
+                      );
+                    })}
+                  </span>
                 </div>
               ))}
             </div>
