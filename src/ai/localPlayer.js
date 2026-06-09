@@ -32,27 +32,35 @@ const conservativeDecision = (handStrength, toCall, pot, stack, currentBet, potO
     return { action: 'fold', amount: 0 };
   }
 
-  // 价值下注：强牌时下注约2/3底池
-  if (handStrength > 0.75 && toCall === 0) {
-    const raiseAmount = Math.min(Math.floor(pot * 0.65) + currentBet, stack + currentBet);
+  // 没人下注时的策略
+  if (toCall === 0) {
+    // 价值下注：强牌时下注约2/3底池
+    if (handStrength > 0.75) {
+      const raiseAmount = Math.min(Math.floor(pot * 0.65) + currentBet, stack + currentBet);
+      return { action: 'raise', amount: raiseAmount };
+    }
+
+    // 半诈唬机会：中等牌力时偶尔加注
+    if (handStrength > 0.55 && Math.random() < 0.3) {
+      const raiseAmount = Math.min(Math.floor(pot * 0.5) + currentBet, stack + currentBet);
+      return { action: 'raise', amount: raiseAmount };
+    }
+
+    return { action: 'check', amount: 0 };
+  }
+
+  // 面对下注时：根据pot odds和牌力决定
+  // 强牌反加注
+  if (handStrength > 0.8) {
+    const raiseAmount = Math.min(Math.floor(pot * 0.75) + currentBet + toCall, stack + currentBet);
     return { action: 'raise', amount: raiseAmount };
   }
 
-  // 半诈唬机会：中等牌力时偶尔加注
-  if (handStrength > 0.55 && toCall === 0 && Math.random() < 0.3) {
-    const raiseAmount = Math.min(Math.floor(pot * 0.5) + currentBet, stack + currentBet);
-    return { action: 'raise', amount: raiseAmount };
-  }
-
-  // 跟注条件：pot odds 有利
-  if (toCall > 0 && handStrength > potOdds) {
+  // 跟注条件：pot odds 有利且牌力足够
+  if (handStrength > potOdds && handStrength > 0.4) {
     return { action: 'call', amount: currentBet + toCall };
   }
 
-  // 否则check或fold
-  if (toCall === 0) {
-    return { action: 'check', amount: 0 };
-  }
   return { action: 'fold', amount: 0 };
 };
 
@@ -66,24 +74,34 @@ const aggressiveDecision = (handStrength, toCall, pot, stack, currentBet, potOdd
     return { action: 'fold', amount: 0 };
   }
 
-  // 频繁加注：中等以上牌力就考虑加注
-  if (handStrength > 0.4 || Math.random() < bluffChance) {
-    const aggression = 0.6 + Math.random() * 0.4; // 60%-100%底池
+  // 没人下注时，频繁加注
+  if (toCall === 0) {
+    if (handStrength > 0.4 || Math.random() < bluffChance) {
+      const aggression = 0.6 + Math.random() * 0.4; // 60%-100%底池
+      const raiseAmount = Math.min(
+        Math.floor(pot * aggression) + currentBet,
+        stack + currentBet
+      );
+      return { action: 'raise', amount: raiseAmount };
+    }
+    return { action: 'check', amount: 0 };
+  }
+
+  // 面对下注时：强牌反加注，中等牌跟注，弱牌弃牌
+  if (handStrength > 0.65) {
+    // 强牌：3bet反加注
     const raiseAmount = Math.min(
-      Math.floor(pot * aggression) + currentBet,
+      Math.floor(pot * (0.8 + Math.random() * 0.4)) + currentBet + toCall,
       stack + currentBet
     );
     return { action: 'raise', amount: raiseAmount };
   }
 
   // 跟注：更宽松的条件
-  if (toCall > 0 && (handStrength > potOdds * 0.8 || handStrength > 0.3)) {
+  if (handStrength > potOdds * 0.8 || handStrength > 0.3) {
     return { action: 'call', amount: currentBet + toCall };
   }
 
-  if (toCall === 0) {
-    return { action: 'check', amount: 0 };
-  }
   return { action: 'fold', amount: 0 };
 };
 
@@ -92,31 +110,34 @@ const balancedDecision = (handStrength, potOdds, toCall, pot, stack, currentBet)
   // 考虑隐含赔率（implied odds）
   const impliedOdds = potOdds * (1 + Math.min(stack / pot, 2) * 0.2);
 
-  // 弃牌：牌力不足以匹配赔率
-  if (handStrength < impliedOdds && toCall > 0) {
-    return { action: 'fold', amount: 0 };
+  // 没人下注时的策略
+  if (toCall === 0) {
+    // 价值下注：强牌
+    if (handStrength > 0.7) {
+      const raiseAmount = Math.min(Math.floor(pot * 0.7) + currentBet, stack + currentBet);
+      return { action: 'raise', amount: raiseAmount };
+    }
+
+    // 半诈唬：中等牌力，有位置优势时
+    if (handStrength > 0.5 && Math.random() < 0.4) {
+      const raiseAmount = Math.min(Math.floor(pot * 0.55) + currentBet, stack + currentBet);
+      return { action: 'raise', amount: raiseAmount };
+    }
+
+    return { action: 'check', amount: 0 };
   }
 
-  // 价值下注：强牌
-  if (handStrength > 0.7) {
-    const raiseAmount = Math.min(Math.floor(pot * 0.7) + currentBet, stack + currentBet);
+  // 面对下注时：强牌反加注
+  if (handStrength > 0.75) {
+    const raiseAmount = Math.min(Math.floor(pot * 0.8) + currentBet + toCall, stack + currentBet);
     return { action: 'raise', amount: raiseAmount };
   }
 
-  // 半诈唬：中等牌力，有位置优势时
-  if (handStrength > 0.5 && toCall === 0 && Math.random() < 0.4) {
-    const raiseAmount = Math.min(Math.floor(pot * 0.55) + currentBet, stack + currentBet);
-    return { action: 'raise', amount: raiseAmount };
-  }
-
-  // 跟注
-  if (toCall > 0 && handStrength > potOdds) {
+  // 跟注：牌力大于隐含赔率
+  if (handStrength > impliedOdds) {
     return { action: 'call', amount: currentBet + toCall };
   }
 
-  if (toCall === 0) {
-    return { action: 'check', amount: 0 };
-  }
   return { action: 'fold', amount: 0 };
 };
 
@@ -152,30 +173,35 @@ const randomDecision = (toCall, pot, stack, currentBet, handStrength) => {
 
 // GTO启发式：数学型 - 严格基于pot odds
 const mathematicalDecision = (handStrength, potOdds, toCall, pot, stack, currentBet) => {
-  // 严格的pot odds决策
-  if (handStrength < potOdds && toCall > 0) {
+  // 没人下注时的策略
+  if (toCall === 0) {
+    // 强牌：最大化价值
+    if (handStrength > 0.8) {
+      const raiseAmount = Math.min(Math.floor(pot * 0.85) + currentBet, stack + currentBet);
+      return { action: 'raise', amount: raiseAmount };
+    }
+
+    // 中强牌：适度加注
+    if (handStrength > 0.65) {
+      const raiseAmount = Math.min(Math.floor(pot * 0.6) + currentBet, stack + currentBet);
+      return { action: 'raise', amount: raiseAmount };
+    }
+
+    return { action: 'check', amount: 0 };
+  }
+
+  // 面对下注时：严格的pot odds决策
+  // 牌力不足，弃牌
+  if (handStrength < potOdds) {
     return { action: 'fold', amount: 0 };
   }
 
-  // 强牌：最大化价值
-  if (handStrength > 0.8) {
-    const raiseAmount = Math.min(Math.floor(pot * 0.85) + currentBet, stack + currentBet);
-    return { action: 'raise', amount: raiseAmount };
-  }
-
-  // 中强牌：适度加注
-  if (handStrength > 0.65 && toCall === 0) {
-    const raiseAmount = Math.min(Math.floor(pot * 0.6) + currentBet, stack + currentBet);
+  // 超强牌：反加注
+  if (handStrength > 0.85) {
+    const raiseAmount = Math.min(Math.floor(pot * 0.9) + currentBet + toCall, stack + currentBet);
     return { action: 'raise', amount: raiseAmount };
   }
 
   // 按pot odds跟注
-  if (toCall > 0 && handStrength >= potOdds) {
-    return { action: 'call', amount: currentBet + toCall };
-  }
-
-  if (toCall === 0) {
-    return { action: 'check', amount: 0 };
-  }
-  return { action: 'fold', amount: 0 };
+  return { action: 'call', amount: currentBet + toCall };
 };
