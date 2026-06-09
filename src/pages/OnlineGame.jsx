@@ -87,10 +87,15 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
             console.log('[联机游戏] 检测到游戏启动，开始发牌动画');
             setIsGameStarting(true);
             animateDealing(state.players.length);
-            return; // 先不更新 gameState，等动画完成
+            // 不要return，继续更新gameState
           }
 
           setGameState(state);
+
+          // 如果不在DEALING阶段，确保dealingComplete为true
+          if (state.stage !== GAME_STAGES.DEALING && state.stage !== GAME_STAGES.WAITING) {
+            setDealingComplete(true);
+          }
 
           // 检测阶段变化
           if (prevStageRef.current && prevStageRef.current !== state.stage) {

@@ -11,8 +11,9 @@ const OnlineWaitingRoom = ({ roomId, user, onGameStart, onBack }) => {
 
   const isHost = room?.hostId === user.userId;
   const players = room?.players ? Object.values(room.players) : [];
-  const allReady = players.length >= 2 && players.every(p => p.isReady);
-  const isFull = players.length >= (room?.settings.maxPlayers || 4);
+  const maxPlayers = room?.settings.maxPlayers || 4;
+  const allReady = players.length >= 2 && players.length === maxPlayers && players.every(p => p.isReady);
+  const isFull = players.length >= maxPlayers;
 
   useEffect(() => {
     // 订阅房间状态
