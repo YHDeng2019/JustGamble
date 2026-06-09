@@ -12,6 +12,8 @@ import { playSound } from '../game/sound';
 import Table from '../ui/Table';
 import ActionBar from '../ui/ActionBar';
 import GameLog from '../ui/GameLog';
+import RoundSummary from '../ui/RoundSummary';
+import '../styles/round-summary.css';
 import { v4 as uuidv4 } from 'uuid';
 
 const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled, onToggleSound }) => {
@@ -37,6 +39,8 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
   const [showSettingsMenu, setShowSettingsMenu] = useState(false); // 设置下拉菜单
   const [showHandGuide, setShowHandGuide] = useState(false); // 牌型说明弹窗
   const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 }); // 下拉菜单位置
+  const [showRoundSummary, setShowRoundSummary] = useState(false); // 回合结束弹窗
+  const [roundSummaryData, setRoundSummaryData] = useState(null); // 回合结束数据
   const countdownRef = React.useRef(null);
   const gameRef = React.useRef(null); // 始终指向当前引擎实例，避免 state 闭包陷阱
   const wasHumanTurnRef = React.useRef(false); // 追踪上一次是否人类回合
@@ -156,13 +160,14 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
         clearInterval(dealInterval);
         // 发牌完成，开始游戏
         setTimeout(() => {
-          setDealingCards(totalCards);
           setDealingComplete(true); // 标记发牌完成
+          // 动画完成后重置dealingCards，让Table显示实际手牌
+          setDealingCards(undefined);
 
-          // 检查是否人类玩家第一个决策，如果是则额外停顿1.5秒让玩家看牌
+          // 检查是否人类玩家第一个决策，如果是则额外停顿2秒让玩家看牌
           const firstPlayer = currentGame.getCurrentPlayer();
           const isHumanFirst = firstPlayer && firstPlayer.isHuman && !firstPlayer.folded;
-          const extraDelay = isHumanFirst ? 1500 : 0;
+          const extraDelay = isHumanFirst ? 2000 : 0;
 
           setTimeout(() => {
             processTurn(currentGame, userSettings);
@@ -503,31 +508,28 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
     setSessionHistory(prev => [...prev, roundRecord]);
     setWinnerHighlight(winnerIds);
 
-    // 显示轻量 toast
+    // 播放胜负音效
     const humanWon = winnerIds.includes('human');
-    const profit = result.winners['human'] || 0;
-    // 摊牌时显示牌型，对手弃牌时只显示赢家
-    let toastText;
-    if (humanWon) {
-      toastText = isShowdown && result.bestHand
-        ? `🏆 你赢了 +${profit}（${result.bestHand}）`
-        : `🏆 你赢了 +${profit}`;
-    } else {
-      toastText = `${winnerNames.join('、')} 赢得底池`;
-    }
-    setRoundToast({ text: toastText, type: humanWon ? 'win' : 'lose' });
     playSound(humanWon ? 'win' : 'lose', !soundEnabled);
 
     debugLog.finishGameResult(roundRecord);
 
-    // 摊牌后停留更久（看清对手牌+牌型），弃牌结束也需要足够时间消化信息
-    const nextDelay = isShowdown ? 6500 : 3500;
+    // 显示回合结束弹窗
+    setRoundSummaryData({
+      players: currentGame.players,
+      result: result,
+      initialChips: currentUser.settings.initialChips
+    });
+    setShowRoundSummary(true);
+
+    // 5秒后自动关闭弹窗并开始下一轮
     countdownRef.current = setTimeout(() => {
       countdownRef.current = null;
-      setRoundToast(null);
+      setShowRoundSummary(false);
+      setRoundSummaryData(null);
       setWinnerHighlight(null);
       startNewHand();
-    }, nextDelay);
+    }, 5000);
   };
 
   const startNewHand = () => {
@@ -954,6 +956,16 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
             <p className="hand-guide-tip">点击任意位置关闭</p>
           </div>
         </div>
+      )}
+
+      {/* 回合结束弹窗 */}
+      {showRoundSummary && roundSummaryData && (
+        <RoundSummary
+          players={roundSummaryData.players}
+          result={roundSummaryData.result}
+          initialChips={roundSummaryData.initialChips}
+          isOnlineMode={false}
+        />
       )}
     </div>
   );

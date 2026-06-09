@@ -1010,12 +1010,19 @@ body {
 }
 
 .stealth-mode .card-panel h2,
-.stealth-mode .card-panel h3 {
+.stealth-mode .card-panel h3,
+.stealth-mode .card-panel h4 {
   color: #000;
 }
 
-.stealth-mode .card-panel p {
+.stealth-mode .card-panel p,
+.stealth-mode .card-panel li,
+.stealth-mode .card-panel ul {
   color: #333;
+}
+
+.stealth-mode .card-panel strong {
+  color: #000;
 }
 
 .stealth-mode .player-option {
@@ -1040,8 +1047,18 @@ body {
 }
 
 .stealth-mode .menu-buttons .btn-primary {
-  background: #000;
-  color: #fff;
+  background: #fff;
+  border: 2px solid #000;
+  color: #000;
+  font-weight: bold;
+}
+
+.stealth-mode .menu-bg {
+  background: #fff;
+}
+
+.stealth-mode .menu-bg::after {
+  display: none;
 }
 
 .stealth-mode .current-user {

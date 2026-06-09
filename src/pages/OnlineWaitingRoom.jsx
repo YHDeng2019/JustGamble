@@ -257,7 +257,7 @@ const OnlineWaitingRoom = ({ roomId, user, onGameStart, onBack }) => {
                 onClick={handleStartGame}
                 disabled={loading || !allReady}
               >
-                {allReady ? '🎮 开始游戏' : `等待玩家准备 (${players.filter(p => p.isReady).length}/${players.length})`}
+                {allReady ? '🎮 开始游戏' : `等待玩家准备 (${players.filter(p => p.isReady).length}/${room.settings.maxPlayers})`}
               </button>
             </>
           )}

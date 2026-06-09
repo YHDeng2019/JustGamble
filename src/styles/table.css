@@ -401,6 +401,12 @@
   animation: pulseBadge 1.5s ease-in-out infinite;
 }
 
+/* 离线玩家座位整体变灰 */
+.player-seat.offline {
+  opacity: 0.5;
+  filter: grayscale(0.6);
+}
+
 @keyframes pulseBadge {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }

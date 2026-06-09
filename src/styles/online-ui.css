@@ -5,7 +5,7 @@
   position: absolute;
   top: 10px;
   right: 15px;
-  z-index: 150;
+  z-index: 9990;
   display: flex;
   align-items: center;
   gap: 0.5rem;

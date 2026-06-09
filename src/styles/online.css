@@ -217,16 +217,26 @@
 
 .player-card .kick-btn {
   position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  padding: 0.25rem 0.5rem;
-  font-size: 0.8rem;
-  opacity: 0.7;
-  transition: opacity 0.2s ease;
+  top: -0.25rem;
+  right: -0.25rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  font-size: 0.7rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.8;
+  transition: all 0.2s ease;
+  background: #f44336;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 .player-card:hover .kick-btn {
   opacity: 1;
+  transform: scale(1.1);
 }
 
 .player-card.ready {
@@ -394,4 +404,86 @@
   .room-actions {
     flex-direction: column;
   }
+}
+
+/* 摸鱼模式 */
+.stealth-mode .player-card .kick-btn {
+  background: #000;
+  border: 2px solid #fff;
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.stealth-mode .lobby-info,
+.stealth-mode .menu-card {
+  color: #000;
+}
+
+.stealth-mode .lobby-info h3,
+.stealth-mode .menu-card h2 {
+  color: #000;
+}
+
+.stealth-mode .lobby-info li {
+  border-bottom-color: #ddd;
+  color: #333;
+}
+
+/* 大厅标题和房间信息 */
+.stealth-mode .lobby-header h1,
+.stealth-mode .room-header h1,
+.stealth-mode .room-title h1 {
+  color: #000;
+}
+
+.stealth-mode .room-code {
+  color: #000;
+}
+
+.stealth-mode .room-host,
+.stealth-mode .room-players {
+  color: #333;
+}
+
+.stealth-mode .room-info-item {
+  color: #333;
+}
+
+/* 等待室玩家信息 */
+.stealth-mode .player-info,
+.stealth-mode .player-name,
+.stealth-mode .player-status {
+  color: #000;
+}
+
+/* 房间设置 */
+.stealth-mode .settings-grid,
+.stealth-mode .setting-item label,
+.stealth-mode .setting-value {
+  color: #000;
+}
+
+/* 表单输入 */
+.stealth-mode .room-code-input input {
+  color: #000;
+  background: #f5f5f5;
+  border-color: #ddd;
+}
+
+/* 房间提示 */
+.stealth-mode .room-tips {
+  background: #f5f5f5;
+  border-color: #ccc;
+}
+
+.stealth-mode .room-tips h4 {
+  color: #000;
+}
+
+.stealth-mode .room-tips li {
+  color: #333;
+}
+
+.stealth-mode .room-tips strong {
+  color: #000;
 }

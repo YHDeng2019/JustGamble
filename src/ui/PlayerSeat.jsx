@@ -45,7 +45,7 @@ const PlayerSeat = ({ player, isCurrent, isDealer, position, aiType, isThinking,
     setPrevFolded(player.folded);
   }, [player.bet, player.folded, isCurrent]);
 
-  const seatClass = `player-seat seat-${position} ${isCurrent ? 'active' : ''} ${player.folded ? 'folded' : ''} ${player.isHuman ? 'human' : ''} ${isWinner ? 'winner' : ''} ${isThinking ? 'thinking' : ''}`;
+  const seatClass = `player-seat seat-${position} ${isCurrent ? 'active' : ''} ${player.folded ? 'folded' : ''} ${player.isHuman ? 'human' : ''} ${isWinner ? 'winner' : ''} ${isThinking ? 'thinking' : ''} ${player.isOffline ? 'offline' : ''}`;
 
   // 根据 visibleCards 决定显示多少张牌
   const cardsToShow = player.hand ? player.hand.slice(0, visibleCards ?? player.hand.length) : [];

@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { OnlineGameEngine } from '../game/onlineEngine';
 import { getRoom, leaveRoom } from '../services/roomService';
-import { startHeartbeat, stopHeartbeat } from '../services/heartbeatService';
+import { getFirebaseDB } from '../services/firebase';
+import { ref, onValue, update, off, get } from 'firebase/database';
+import { startHeartbeat, stopHeartbeat, isPlayerOnline } from '../services/heartbeatService';
 import { EMOJIS, sendEmoji, subscribeToEmojis } from '../services/emojiService';
 import { sendChatMessage, subscribeToChatMessages } from '../services/chatService';
 import { describeCurrentHand } from '../game/handEval';
@@ -12,6 +14,8 @@ import { v4 as uuidv4 } from 'uuid';
 import Table from '../ui/Table';
 import ActionBar from '../ui/ActionBar';
 import GameLog from '../ui/GameLog';
+import RoundSummary from '../ui/RoundSummary';
+import '../styles/round-summary.css';
 import { playSound } from '../game/sound';
 
 const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundEnabled, onToggleSound }) => {
@@ -20,6 +24,7 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
   const [actionBarVisible, setActionBarVisible] = useState(false);
   const [actionBarReady, setActionBarReady] = useState(false);
   const [stageChangeTime, setStageChangeTime] = useState(null); // 记录阶段切换时间
+  const [dealingCompleteTime, setDealingCompleteTime] = useState(null); // 记录发牌完成时间
   const [gameLog, setGameLog] = useState([]);
   const [logCollapsed, setLogCollapsed] = useState(true); // 默认收起
   const [error, setError] = useState('');
@@ -32,8 +37,8 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
   const [yourTurn, setYourTurn] = useState(false);
   const [showTurnNotice, setShowTurnNotice] = useState(false); // 花字提示
   const [thinkingAi, setThinkingAi] = useState(null);
-  const [dealingCards, setDealingCards] = useState(0);
-  const [dealingComplete, setDealingComplete] = useState(false);
+  const [dealingCards, setDealingCards] = useState(undefined);
+  const [dealingComplete, setDealingComplete] = useState(true); // 默认为true，避免阻塞ActionBar
   const [isGameStarting, setIsGameStarting] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [floatingEmojis, setFloatingEmojis] = useState([]);
@@ -43,6 +48,11 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
   const [showChatBox, setShowChatBox] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
+  const [showRoundSummary, setShowRoundSummary] = useState(false);
+  const [roundSummaryData, setRoundSummaryData] = useState(null);
+  const [readyStatus, setReadyStatus] = useState({}); // 玩家准备状态 {userId: boolean}
+  const [isReady, setIsReady] = useState(false); // 当前玩家是否准备
+  const [offlinePlayerIds, setOfflinePlayerIds] = useState([]); // 离线玩家ID列表
 
   const engineRef = useRef(null);
   const isHost = room?.hostId === user.userId;
@@ -51,6 +61,11 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
   const buttonRef = useRef(null);
   const wasMyTurnRef = useRef(false);
   const prevStageRef = useRef(null);
+  const lastGameLogLengthRef = useRef(0);
+  const roundEndHandledRef = useRef(false); // 防止重复触发回合结束弹窗
+  const prevCurrentPlayerIdRef = useRef(null); // 上一次的当前行动玩家ID
+  const myTurnStartTimeRef = useRef(null); // 轮到我的时刻（用于决策弹窗延迟）
+  const gameStateRef = useRef(null); // 最新游戏状态（供离线检测等回调读取，避免闭包陈旧）
 
   useEffect(() => {
     let unsubscribe = null;
@@ -91,6 +106,7 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
           }
 
           setGameState(state);
+          gameStateRef.current = state;
 
           // 如果不在DEALING阶段，确保dealingComplete为true
           if (state.stage !== GAME_STAGES.DEALING && state.stage !== GAME_STAGES.WAITING) {
@@ -115,6 +131,17 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
           // 检测获胜
           if (state.stage === GAME_STAGES.RESULT) {
             handleRoundEnd(state);
+          } else if (state.stage === GAME_STAGES.DEALING || state.stage === GAME_STAGES.PRE_FLOP) {
+            // 新一轮开始，关闭回合小结弹窗（所有客户端，包括非房主）
+            if (roundEndHandledRef.current) {
+              console.log('[联机游戏] 检测到新一轮开始，关闭回合小结');
+              roundEndHandledRef.current = false;
+              setShowRoundSummary(false);
+              setRoundSummaryData(null);
+              setReadyStatus({});
+              setIsReady(false);
+              setWinnerHighlight(null);
+            }
           }
 
           // 检测 AI 思考状态
@@ -123,6 +150,19 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
             setThinkingAi(currentPlayer.id);
           } else {
             setThinkingAi(null);
+          }
+
+          // 检测"当前行动玩家"变化：当从别人切换到我时，记录时刻用于决策弹窗延迟
+          const currentPlayerId = currentPlayer?.id || null;
+          if (currentPlayerId !== prevCurrentPlayerIdRef.current) {
+            // 行动玩家发生了变化
+            if (currentPlayerId === user.userId &&
+                prevCurrentPlayerIdRef.current !== null &&
+                prevCurrentPlayerIdRef.current !== user.userId) {
+              // 从"前置玩家"切换到"我"，记录时刻
+              myTurnStartTimeRef.current = Date.now();
+            }
+            prevCurrentPlayerIdRef.current = currentPlayerId;
           }
 
           updateActionBarVisibility(state);
@@ -166,21 +206,34 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
 
     loadRoom();
 
-    // 连接状态检测：15秒无数据=重连中，30秒=断开
-    lastUpdateTimeRef.current = Date.now();
-    const connectionCheck = setInterval(() => {
-      const timeSinceLastUpdate = Date.now() - lastUpdateTimeRef.current;
-      if (timeSinceLastUpdate > 30000) {
-        setConnectionStatus('disconnected');
-      } else if (timeSinceLastUpdate > 15000) {
-        setConnectionStatus('reconnecting');
-      } else {
+    // 使用 Firebase 内置的 .info/connected 检测真实连接状态
+    // 这比依赖游戏状态更新频率更可靠（游戏空闲时也不会误报断线）
+    const db = getFirebaseDB();
+    const connectedRef = ref(db, '.info/connected');
+    let reconnectTimer = null;
+
+    const connListener = onValue(connectedRef, (snap) => {
+      const isConnected = snap.val() === true;
+      if (isConnected) {
+        // 已连接，清除重连计时器
+        if (reconnectTimer) {
+          clearTimeout(reconnectTimer);
+          reconnectTimer = null;
+        }
         setConnectionStatus('connected');
+      } else {
+        // 断开连接：先显示"重连中"，10秒后仍未恢复则显示"已断开"
+        setConnectionStatus('reconnecting');
+        if (reconnectTimer) clearTimeout(reconnectTimer);
+        reconnectTimer = setTimeout(() => {
+          setConnectionStatus('disconnected');
+        }, 10000);
       }
-    }, 5000);
+    });
 
     return () => {
-      clearInterval(connectionCheck);
+      off(connectedRef, 'value', connListener);
+      if (reconnectTimer) clearTimeout(reconnectTimer);
       if (unsubscribe) {
         unsubscribe();
       }
@@ -190,6 +243,96 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
       }
     };
   }, [roomId, user.userId]);
+
+  // 监听准备状态
+  useEffect(() => {
+    if (!roomId || !showRoundSummary) return;
+
+    const db = getFirebaseDB();
+    const readyRef = ref(db, `rooms/${roomId}/roundReady`);
+
+    const listener = onValue(readyRef, (snapshot) => {
+      const ready = snapshot.val() || {};
+      setReadyStatus(ready);
+
+      // 检查是否所有玩家都准备好
+      if (gameState && gameState.players) {
+        const allReady = gameState.players.every(p => ready[p.id] === true);
+
+        if (allReady && isHost) {
+          // 所有人准备好，房主触发下一轮
+          console.log('[联机游戏] 所有玩家准备完毕，开始下一轮');
+          setShowRoundSummary(false);
+          setRoundSummaryData(null);
+          setReadyStatus({});
+          setIsReady(false);
+          setWinnerHighlight(null);
+
+          // 房主触发下一轮
+          setTimeout(() => {
+            if (engineRef.current) {
+              engineRef.current.engine.startNewRound();
+              const newState = engineRef.current.engine.getGameState();
+              engineRef.current.pushGameState(newState);
+            }
+          }, 500);
+        }
+      }
+    });
+
+    return () => off(readyRef, 'value', listener);
+  }, [roomId, showRoundSummary, gameState, isHost]);
+
+  // 监听房间玩家心跳，实时计算离线状态（所有玩家可见，不依赖"轮到谁行动"）
+  useEffect(() => {
+    if (!roomId) return;
+
+    const db = getFirebaseDB();
+    const playersRef = ref(db, `rooms/${roomId}/players`);
+    let roomPlayersCache = {};
+
+    // 根据缓存的玩家数据重新计算离线列表
+    // 离线 = 游戏中的真人玩家，在房间players中已不存在（已退出）或心跳超时（掉线）
+    const recomputeOffline = () => {
+      const gs = gameStateRef.current;
+      if (!gs || !gs.players) return;
+
+      const offline = [];
+      gs.players.forEach(gp => {
+        // 机器人永远在线
+        if (gp.isBot || !gp.isHuman) return;
+        // 自己不标记离线
+        if (gp.id === user.userId) return;
+
+        const roomPlayer = roomPlayersCache[gp.id];
+        // 房间中已无此玩家（主动退出）或心跳超时（掉线）
+        if (!roomPlayer || !isPlayerOnline(roomPlayer)) {
+          offline.push(gp.id);
+        }
+      });
+
+      setOfflinePlayerIds(prev => {
+        // 避免无变化时触发重渲染
+        if (prev.length === offline.length && prev.every(id => offline.includes(id))) {
+          return prev;
+        }
+        return offline;
+      });
+    };
+
+    const listener = onValue(playersRef, (snapshot) => {
+      roomPlayersCache = snapshot.val() || {};
+      recomputeOffline();
+    });
+
+    // 每5秒重新检查一次心跳（即使没有数据变化，心跳过期也要能检测到）
+    const interval = setInterval(recomputeOffline, 5000);
+
+    return () => {
+      off(playersRef, 'value', listener);
+      clearInterval(interval);
+    };
+  }, [roomId]);
 
   // 计算下拉菜单位置
   useEffect(() => {
@@ -249,11 +392,60 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
     wasMyTurnRef.current = isMyTurn;
   }, [gameState, roundToast, soundEnabled, user.userId, yourTurn]);
 
+  // 监听gameLog变化，播放AI玩家动作音效
+  useEffect(() => {
+    if (!gameState || !gameState.gameLog) return;
+
+    const currentLogLength = gameState.gameLog.length;
+
+    // 首次加载或日志重置（新回合）时，只记录长度不播放音效
+    if (lastGameLogLengthRef.current === 0 || currentLogLength < lastGameLogLengthRef.current) {
+      lastGameLogLengthRef.current = currentLogLength;
+      return;
+    }
+
+    // 检测到新的日志条目
+    if (currentLogLength > lastGameLogLengthRef.current) {
+      const newLogs = gameState.gameLog.slice(0, currentLogLength - lastGameLogLengthRef.current);
+
+      // 遍历新日志，播放对应音效
+      newLogs.forEach(log => {
+        // 跳过自己的动作（已在handleAction中播放）
+        const isMyAction = gameState.players.find(p => p.id === user.userId && p.name === log.player);
+        if (isMyAction) return;
+
+        // 根据日志消息判断动作类型
+        const message = log.message.toLowerCase();
+        if (message.includes('弃牌') || message.includes('fold')) {
+          playSound('fold', !soundEnabled);
+        } else if (message.includes('过牌') || message.includes('check')) {
+          playSound('check', !soundEnabled);
+        } else if (message.includes('跟注') || message.includes('call') ||
+                   message.includes('加注') || message.includes('raise') ||
+                   message.includes('下注') || message.includes('bet')) {
+          playSound('chip', !soundEnabled);
+        }
+
+        // 检测全押：日志中包含"全押"或找到对应玩家且allIn为true
+        if (message.includes('全押') || message.includes('all-in') || message.includes('allin')) {
+          const player = gameState.players.find(p => p.name === log.player);
+          if (player && player.allIn) {
+            playSound('allin', !soundEnabled);
+            setAllInFlash(player.name);
+            setTimeout(() => setAllInFlash(null), 1400);
+          }
+        }
+      });
+
+      lastGameLogLengthRef.current = currentLogLength;
+    }
+  }, [gameState, soundEnabled, user.userId]);
+
   // 发牌动画
   const animateDealing = (playerCount) => {
     const totalCards = playerCount * 2;
     let dealt = 0;
-    setDealingCards(0);
+    setDealingCards(1); // 从1开始，避免0被误认为是有效值
     setDealingComplete(false);
 
     const dealInterval = setInterval(() => {
@@ -263,10 +455,11 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
       if (dealt >= totalCards) {
         clearInterval(dealInterval);
         setTimeout(() => {
-          setDealingCards(totalCards);
           setDealingComplete(true);
           setIsGameStarting(false);
-          // 动画完成后更新状态，触发游戏继续
+          setDealingCompleteTime(Date.now()); // 记录发牌完成时间
+          // 动画完成后重置dealingCards，让Table显示实际手牌
+          setDealingCards(undefined);
         }, 400);
       }
     }, 150);
@@ -311,13 +504,30 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
     });
 
     if (canAct) {
-      // 计算延迟：如果刚发生阶段切换（翻牌/转牌/河牌），增加人性化等待时间
+      // 计算延迟：人性化等待时间
       let delay = 600;
+
+      // 检查阶段切换延迟（翻牌/转牌/河牌后停顿2s）
       if (stageChangeTime) {
         const timeSinceStageChange = Date.now() - stageChangeTime;
         if (timeSinceStageChange < 2000) {
-          // 阶段切换后2秒内，增加额外延迟
-          delay = Math.max(600, 2000 - timeSinceStageChange);
+          delay = Math.max(delay, 2000 - timeSinceStageChange);
+        }
+      }
+
+      // 检查发牌完成延迟（2秒）
+      if (dealingCompleteTime) {
+        const timeSinceDealingComplete = Date.now() - dealingCompleteTime;
+        if (timeSinceDealingComplete < 2000) {
+          delay = Math.max(delay, 2000 - timeSinceDealingComplete);
+        }
+      }
+
+      // 检查"前置玩家做完决策后轮到我"的延迟（停顿2s）
+      if (myTurnStartTimeRef.current) {
+        const timeSinceMyTurn = Date.now() - myTurnStartTimeRef.current;
+        if (timeSinceMyTurn < 2000) {
+          delay = Math.max(delay, 2000 - timeSinceMyTurn);
         }
       }
 
@@ -333,15 +543,19 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
   };
 
   const handleRoundEnd = (state) => {
+    // 防止重复触发
+    if (roundEndHandledRef.current) return;
+    roundEndHandledRef.current = true;
+
     // 从 lastShowdownResult 或构造获胜结果
     const result = engineRef.current?.engine?.lastShowdownResult;
 
     if (!result) {
       // 没有摊牌数据，说明是弃牌结束
       const activePlayers = state.players.filter(p => !p.folded);
-      if (activePlayers.length === 1) {
+      if (activePlayers.length >= 1) {
         const winner = activePlayers[0];
-        showWinnerToast({
+        displayRoundSummary({
           winners: { [winner.id]: state.pot },
           playerHands: {},
           bestHand: ''
@@ -350,14 +564,17 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
       return;
     }
 
-    showWinnerToast(result, state);
+    displayRoundSummary(result, state);
   };
 
-  const showWinnerToast = (result, state) => {
+  const displayRoundSummary = async (result, state) => {
     const winnerIds = Object.keys(result.winners);
-    const winnerNames = winnerIds.map(id => state.players.find(p => p.id === id)?.name).filter(Boolean);
 
     setWinnerHighlight(winnerIds);
+
+    // 播放胜负音效
+    const iWon = winnerIds.includes(user.userId);
+    playSound(iWon ? 'win' : 'lose', !soundEnabled);
 
     // 是否摊牌
     const isShowdown = result.playerHands && Object.keys(result.playerHands).length > 0;
@@ -384,7 +601,7 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
     const roundRecord = {
       round: state.roundsPlayed,
       winners: result.winners,
-      winnerNames,
+      winnerNames: winnerIds.map(id => state.players.find(p => p.id === id)?.name).filter(Boolean),
       bestHand: result.bestHand || '',
       playerChips: state.players.map(p => ({ id: p.id, name: p.name, chips: p.chips })),
       showdown
@@ -392,27 +609,42 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
 
     setSessionHistory(prev => [...prev, roundRecord]);
 
-    const iWon = winnerIds.includes(user.userId);
-    const profit = result.winners[user.userId] || 0;
+    // 显示回合结束弹窗
+    setRoundSummaryData({
+      players: state.players,
+      result: result,
+      initialChips: room?.settings?.initialChips || 1000
+    });
+    setShowRoundSummary(true);
+    setIsReady(true); // 默认已准备，显示"取消准备"按钮
 
-    let toastText;
-    if (iWon) {
-      toastText = isShowdown && result.bestHand
-        ? `🏆 你赢了 +${profit}（${result.bestHand}）`
-        : `🏆 你赢了 +${profit}`;
-    } else {
-      toastText = `${winnerNames.join('、')} 赢得底池`;
+    // 房主初始化准备状态
+    if (isHost) {
+      const db = getFirebaseDB();
+      const readyRef = ref(db, `rooms/${roomId}/roundReady`);
+      const initialReady = {};
+
+      // 获取房间玩家在线状态
+      const roomPlayersRef = ref(db, `rooms/${roomId}/players`);
+      const roomPlayersSnapshot = await get(roomPlayersRef);
+      const roomPlayers = roomPlayersSnapshot.val() || {};
+
+      state.players.forEach(p => {
+        const roomPlayer = roomPlayers[p.id];
+        // 机器人和在线真人自动准备
+        if (p.isBot || (roomPlayer && roomPlayer.isOnline)) {
+          initialReady[p.id] = true;
+        } else {
+          initialReady[p.id] = false;
+        }
+      });
+
+      // 使用set而不是update，确保完全替换
+      await update(readyRef, initialReady);
+
+      console.log('[联机游戏] 房主初始化准备状态:', initialReady);
     }
-
-    setRoundToast({ text: toastText, type: iWon ? 'win' : 'lose' });
-    playSound(iWon ? 'win' : 'lose', !soundEnabled);
-
-    // 摊牌后停留更久（看清对手牌+牌型），弃牌结束也需要足够时间消化信息
-    const nextDelay = isShowdown ? 6500 : 3500;
-    setTimeout(() => {
-      setRoundToast(null);
-      setWinnerHighlight(null);
-    }, nextDelay);
+    // 非房主不需要做任何事，等待房主初始化
   };
 
   const getValidActions = () => {
@@ -472,7 +704,21 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
   };
 
   const handleExit = async () => {
-    if (!confirm('确定要退出游戏吗？你的筹码将丢失。')) {
+    const myPlayer = gameState?.players?.find(p => p.id === user.userId);
+    const initialChips = room?.settings?.initialChips || 1000;
+    const chipStatus = myPlayer
+      ? myPlayer.chips > initialChips
+        ? `当前盈利 +${myPlayer.chips - initialChips}`
+        : myPlayer.chips < initialChips
+        ? `当前亏损 ${myPlayer.chips - initialChips}`
+        : '当前持平'
+      : '';
+
+    const message = chipStatus
+      ? `确定要退出游戏吗？${chipStatus}，退出后无法恢复。`
+      : '确定要退出游戏吗？';
+
+    if (!confirm(message)) {
       return;
     }
 
@@ -516,6 +762,28 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
     } catch (err) {
       console.error('[联机游戏] 退出失败:', err);
       onExit();
+    }
+  };
+
+  const handleReady = async () => {
+    try {
+      const db = getFirebaseDB();
+      const readyRef = ref(db, `rooms/${roomId}/roundReady/${user.userId}`);
+      await update(readyRef.parent, { [user.userId]: true });
+      setIsReady(true);
+    } catch (err) {
+      console.error('[联机游戏] 标记准备失败:', err);
+    }
+  };
+
+  const handleUnready = async () => {
+    try {
+      const db = getFirebaseDB();
+      const readyRef = ref(db, `rooms/${roomId}/roundReady/${user.userId}`);
+      await update(readyRef.parent, { [user.userId]: false });
+      setIsReady(false);
+    } catch (err) {
+      console.error('[联机游戏] 取消准备失败:', err);
     }
   };
 
@@ -569,6 +837,15 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
       </div>
     );
   }
+
+  // 合并离线标记到游戏状态，供 Table/PlayerSeat 显示"已离线"角标
+  const gameStateWithOffline = {
+    ...gameState,
+    players: gameState.players.map(p => ({
+      ...p,
+      isOffline: offlinePlayerIds.includes(p.id)
+    }))
+  };
 
   return (
     <div className="page-container game-page">
@@ -726,7 +1003,7 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
       )}
 
       <Table
-        gameState={gameState}
+        gameState={gameStateWithOffline}
         aiStatus={{}}
         userSettings={{ userId: user.userId }}
         thinkingAi={thinkingAi}
@@ -852,6 +1129,21 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
             </button>
           </form>
         </div>
+      )}
+
+      {/* 回合结束弹窗 */}
+      {showRoundSummary && roundSummaryData && (
+        <RoundSummary
+          players={roundSummaryData.players}
+          result={roundSummaryData.result}
+          initialChips={roundSummaryData.initialChips}
+          onReady={handleReady}
+          onUnready={handleUnready}
+          isReady={isReady}
+          readyStatus={readyStatus}
+          isOnlineMode={true}
+          onExit={handleExit}
+        />
       )}
     </div>
   );
