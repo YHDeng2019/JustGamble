@@ -4,6 +4,7 @@ import { OnlineGameEngine } from '../game/onlineEngine';
 import { getRoom, leaveRoom } from '../services/roomService';
 import { startHeartbeat, stopHeartbeat } from '../services/heartbeatService';
 import { EMOJIS, sendEmoji, subscribeToEmojis } from '../services/emojiService';
+import { sendChatMessage, subscribeToChatMessages } from '../services/chatService';
 import { describeCurrentHand } from '../game/handEval';
 import { GAME_STAGES } from '../game/engine';
 import { addGameHistory } from '../auth/userManager';
@@ -36,7 +37,10 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
   const [floatingEmojis, setFloatingEmojis] = useState([]);
   const [sessionHistory, setSessionHistory] = useState([]);
   const [gameStartTime, setGameStartTime] = useState(null);
-  const [showHandGuide, setShowHandGuide] = useState(false); // 牌型说明弹窗
+  const [showHandGuide, setShowHandGuide] = useState(false);
+  const [showChatBox, setShowChatBox] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
 
   const engineRef = useRef(null);
   const isHost = room?.hostId === user.userId;
@@ -136,8 +140,14 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
           }, 3000);
         });
 
+        // 订阅房间聊天
+        const unsubscribeChat = subscribeToChatMessages(roomId, (message) => {
+          setChatMessages(prev => [...prev.slice(-49), message]); // 保留最近50条
+        });
+
         return () => {
           if (unsubscribeEmojis) unsubscribeEmojis();
+          if (unsubscribeChat) unsubscribeChat();
         };
       } catch (err) {
         console.error('[联机游戏] 初始化失败:', err);
@@ -466,6 +476,20 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
     }
   };
 
+  const handleSendChat = async (e) => {
+    e.preventDefault();
+    if (!chatInput.trim()) return;
+
+    try {
+      await sendChatMessage(roomId, user.userId, user.displayName, chatInput);
+      setChatInput('');
+    } catch (err) {
+      console.error('[联机游戏] 发送消息失败:', err);
+      setError(err.message);
+      setTimeout(() => setError(''), 3000);
+    }
+  };
+
   if (error) {
     return (
       <div className="page-container">
@@ -521,6 +545,16 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
           style={{ marginLeft: '0.5rem' }}
         >
           😊
+        </button>
+
+        {/* 聊天按钮 */}
+        <button
+          className="btn btn-icon chat-btn"
+          onClick={() => setShowChatBox(!showChatBox)}
+          title="聊天"
+          style={{ marginLeft: '0.5rem' }}
+        >
+          💬
         </button>
 
         <div className="settings-dropdown">
@@ -707,6 +741,42 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
             </div>
             <p className="hand-guide-tip">点击任意位置关闭</p>
           </div>
+        </div>
+      )}
+
+      {/* 聊天框 */}
+      {showChatBox && (
+        <div className="chat-box">
+          <div className="chat-header">
+            <span>💬 聊天</span>
+            <button className="chat-close" onClick={() => setShowChatBox(false)}>✕</button>
+          </div>
+          <div className="chat-messages">
+            {chatMessages.length === 0 ? (
+              <div className="chat-empty">暂无消息</div>
+            ) : (
+              chatMessages.map((msg, idx) => (
+                <div key={idx} className={`chat-message ${msg.userId === user.userId ? 'own' : ''}`}>
+                  <span className="chat-user">{msg.userName}:</span>
+                  <span className="chat-text">{msg.message}</span>
+                </div>
+              ))
+            )}
+          </div>
+          <form className="chat-input-form" onSubmit={handleSendChat}>
+            <input
+              type="text"
+              className="chat-input"
+              placeholder="输入消息..."
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              maxLength={200}
+              autoComplete="off"
+            />
+            <button type="submit" className="chat-send-btn" disabled={!chatInput.trim()}>
+              发送
+            </button>
+          </form>
         </div>
       )}
     </div>

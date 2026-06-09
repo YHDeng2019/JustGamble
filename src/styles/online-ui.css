@@ -419,3 +419,190 @@
 .stealth-mode .hand-guide-desc { color: #666; }
 .stealth-mode .hand-guide-example { color: #333; }
 .stealth-mode .hand-guide-row { background: #f5f5f5; border-color: #ddd; }
+
+/* 聊天框样式 */
+.chat-box {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  width: 320px;
+  background: rgba(30, 30, 30, 0.98);
+  border: 2px solid var(--accent);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  z-index: 9998;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+  animation: slideUp 0.2s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-weight: bold;
+  color: var(--accent);
+}
+
+.chat-close {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s;
+}
+
+.chat-close:hover {
+  color: white;
+}
+
+.chat-messages {
+  flex: 1;
+  padding: 0.75rem;
+  max-height: 300px;
+  min-height: 200px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.chat-empty {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 2rem 0;
+  font-size: 0.9rem;
+}
+
+.chat-message {
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  word-wrap: break-word;
+}
+
+.chat-message.own {
+  background: rgba(102, 126, 234, 0.2);
+  border-left: 3px solid var(--accent);
+}
+
+.chat-user {
+  font-weight: bold;
+  color: var(--accent);
+  margin-right: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.chat-text {
+  color: white;
+  font-size: 0.9rem;
+}
+
+.chat-input-form {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.chat-input {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: white;
+  font-size: 0.9rem;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.chat-input:focus {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--accent);
+}
+
+.chat-send-btn {
+  padding: 0.5rem 1rem;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.9rem;
+}
+
+.chat-send-btn:hover:not(:disabled) {
+  background: #7c8ef5;
+  transform: translateY(-1px);
+}
+
+.chat-send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 摸鱼模式 */
+.stealth-mode .chat-box {
+  background: white;
+  border: 2px solid #000;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+
+.stealth-mode .chat-header {
+  border-bottom-color: #ddd;
+  color: #000;
+}
+
+.stealth-mode .chat-message {
+  background: #f5f5f5;
+}
+
+.stealth-mode .chat-message.own {
+  background: #e3f2fd;
+  border-left-color: #000;
+}
+
+.stealth-mode .chat-user {
+  color: #000;
+}
+
+.stealth-mode .chat-text {
+  color: #333;
+}
+
+.stealth-mode .chat-input {
+  background: #f5f5f5;
+  border-color: #ddd;
+  color: #000;
+}
+
+.stealth-mode .chat-input:focus {
+  background: #fff;
+  border-color: #000;
+}
+
+.stealth-mode .chat-send-btn {
+  background: #000;
+}
+
+.stealth-mode .chat-send-btn:hover:not(:disabled) {
+  background: #333;
+}
