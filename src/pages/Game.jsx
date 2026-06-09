@@ -17,7 +17,7 @@ import { v4 as uuidv4 } from 'uuid';
 const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled, onToggleSound }) => {
   const [game, setGame] = useState(null);
   const [gameState, setGameState] = useState(null);
-  const [logCollapsed, setLogCollapsed] = useState(false);
+  const [logCollapsed, setLogCollapsed] = useState(true); // 默认收起
   const [user, setUser] = useState(null);
   const [aiStatus, setAiStatus] = useState({});
   const [thinkingAi, setThinkingAi] = useState(null);
