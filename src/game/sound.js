@@ -10,6 +10,8 @@ const SOUND_KEY = 'poker_sound_enabled';
 
 const AUDIO_SRC = {
   chip: '/audio/poker_chips.wav',
+  win: '/audio/win.wav',
+  yourturn: '/audio/your_turn.mp3',
   menu: '/audio/welcom_bgm.wav',
   game: '/audio/gaming.mp3'
 };
@@ -49,11 +51,7 @@ export const setSoundEnabled = (enabled) => {
 // ============ 合成音效辅助 ============
 const tone = (freq, duration, type = 'sine', gainPeak = 0.15, delay = 0) => {
   const ctx = getCtx();
-  if (!ctx) {
-    console.error('[音效] AudioContext未初始化');
-    return;
-  }
-  console.log(`[音效] 播放tone: freq=${freq}, duration=${duration}, type=${type}, ctx.state=${ctx.state}`);
+  if (!ctx) return;
   const now = ctx.currentTime + delay;
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
@@ -70,11 +68,7 @@ const tone = (freq, duration, type = 'sine', gainPeak = 0.15, delay = 0) => {
 
 const sweep = (freqStart, freqEnd, duration, type = 'sine', gainPeak = 0.15, delay = 0) => {
   const ctx = getCtx();
-  if (!ctx) {
-    console.error('[音效] AudioContext未初始化');
-    return;
-  }
-  console.log(`[音效] 播放sweep: ${freqStart}->${freqEnd}, duration=${duration}, ctx.state=${ctx.state}`);
+  if (!ctx) return;
   const now = ctx.currentTime + delay;
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
@@ -213,8 +207,10 @@ export const unlockAudio = () => {
   if (unlocked) return;
   unlocked = true;
   getCtx();
-  // 预加载筹码采样
+  // 预加载所有采样音效
   loadSample('chip', AUDIO_SRC.chip);
+  loadSample('win', AUDIO_SRC.win);
+  loadSample('yourturn', AUDIO_SRC.yourturn);
   // 若已有待播放的音乐，重试
   if (currentMusic && !musicMuted && isSoundEnabled()) {
     const el = getMusicEl(currentMusic);
@@ -234,40 +230,22 @@ export const sfx = {
   flip: () => sweep(300, 600, 0.15, 'triangle', 0.1),      // 翻公共牌
   check: () => tone(500, 0.1, 'sine', 0.08),               // 过牌：敲桌
   fold: () => sweep(400, 200, 0.18, 'sine', 0.08),         // 弃牌：下行
-  win: () => {                                             // 获胜：上行三连音
-    sweep(523, 784, 0.12, 'triangle', 0.14);
-    tone(659, 0.1, 'triangle', 0.12, 0.12);
-    tone(1047, 0.25, 'triangle', 0.14, 0.24);
-  },
+  win: () => playSample('win', AUDIO_SRC.win, 0.6),        // 获胜：使用真实音频
   lose: () => sweep(440, 220, 0.4, 'sine', 0.1),           // 失败：低沉下行
   allin: () => {                                           // 全押：戏剧重音
     tone(180, 0.3, 'sawtooth', 0.12);
     sweep(400, 900, 0.3, 'square', 0.08, 0.05);
   },
   click: () => tone(600, 0.04, 'square', 0.05),            // 按钮点击
-  yourturn: () => {                                        // 轮到你了：清亮双音提示
-    tone(784, 0.12, 'triangle', 0.1);
-    tone(1047, 0.16, 'triangle', 0.1, 0.13);
-  }
+  yourturn: () => playSample('yourturn', AUDIO_SRC.yourturn, 0.7)  // 轮到你了：使用真实音频
 };
 
 // 统一播放入口：尊重静音设置
 export const playSound = (name, muted = false) => {
-  console.log(`[音效] playSound调用: name=${name}, muted=${muted}, isSoundEnabled=${isSoundEnabled()}`);
-  if (muted || !isSoundEnabled()) {
-    console.log(`[音效] 音效被静音或关闭，跳过播放`);
-    return;
-  }
+  if (muted || !isSoundEnabled()) return;
   const fn = sfx[name];
   if (fn) {
-    try {
-      console.log(`[音效] 播放音效: ${name}`);
-      fn();
-    } catch (e) {
-      console.error(`[音效] 播放失败:`, e);
-    }
-  } else {
-    console.warn(`[音效] 未找到音效: ${name}`);
+    try { fn(); } catch { /* ignore */ }
   }
 };
 
