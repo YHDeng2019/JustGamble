@@ -76,11 +76,14 @@ export class GameEngine {
     for (const player of this.players) {
       player.hand = [];
       player.bet = 0;
-      player.folded = false;
+      // 没筹码的玩家本手直接坐庄外（标记弃牌），避免轮转/结算时卡死
+      player.folded = player.chips <= 0;
       player.allIn = false;
       player.hasActed = false;
       player.showHand = false;
       player.handName = null;
+      // 记录本手开始时的筹码，用于回合小结正确计算盈亏
+      player.roundStartChips = player.chips;
     }
 
     this.stage = GAME_STAGES.DEALING;
@@ -121,7 +124,11 @@ export class GameEngine {
     this.players[sbIndex].hasActed = false;
     this.players[bbIndex].hasActed = false;
 
-    this.currentPlayerIndex = (bbIndex + 1) % this.players.length;
+    // 翻牌前从大盲后第一个"能行动"的玩家开始（跳过弃牌/all-in/没筹码）
+    const firstActor = this.findActablePlayer((bbIndex + 1) % this.players.length);
+    this.currentPlayerIndex = firstActor === -1
+      ? (bbIndex + 1) % this.players.length
+      : firstActor;
     this.lastRaise = this.bigBlind;
   }
 
@@ -141,6 +148,21 @@ export class GameEngine {
 
   getCurrentPlayer() {
     return this.players[this.currentPlayerIndex];
+  }
+
+  // 玩家是否还能行动（未弃牌、未 all-in、且有筹码）
+  canAct(player) {
+    return !!player && !player.folded && !player.allIn && player.chips > 0;
+  }
+
+  // 从 startIndex 起（含）向后查找第一个能行动的玩家下标，找不到返回 -1
+  findActablePlayer(startIndex) {
+    const n = this.players.length;
+    for (let i = 0; i < n; i++) {
+      const idx = (startIndex + i) % n;
+      if (this.canAct(this.players[idx])) return idx;
+    }
+    return -1;
   }
 
   getValidActions() {
@@ -248,28 +270,36 @@ export class GameEngine {
       return;
     }
 
-    do {
-      this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
-    } while (this.players[this.currentPlayerIndex].folded);
-
+    // 先判断本轮下注是否已结束（与"当前轮到谁"无关）
     if (this.isBettingRoundComplete()) {
       this.nextStage();
+      return;
     }
+
+    // 找下一个"能行动"的玩家（跳过弃牌/all-in/没筹码的玩家）
+    const next = this.findActablePlayer((this.currentPlayerIndex + 1) % this.players.length);
+    if (next === -1) {
+      // 没有人能再行动了（都 all-in 或没筹码），直接进入下一阶段
+      this.nextStage();
+      return;
+    }
+    this.currentPlayerIndex = next;
   }
 
   isBettingRoundComplete() {
     const activePlayers = this.players.filter(p => !p.folded);
     if (activePlayers.every(p => p.allIn)) return true;
 
-    // 所有未 all-in 的活跃玩家必须已行动且下注额相等
-    const nonAllInPlayers = activePlayers.filter(p => !p.allIn);
-    if (nonAllInPlayers.length === 0) return true;
+    // 只有"还能行动"的玩家（未 all-in 且有筹码）才需要行动且下注相等
+    // 0 筹码玩家视为不能再行动，不应阻塞本轮结束
+    const actablePlayers = activePlayers.filter(p => !p.allIn && p.chips > 0);
+    if (actablePlayers.length === 0) return true;
 
-    const allActed = nonAllInPlayers.every(p => p.hasActed);
+    const allActed = actablePlayers.every(p => p.hasActed);
     if (!allActed) return false;
 
     const maxBet = Math.max(...activePlayers.map(p => p.bet));
-    const allBetsEqual = nonAllInPlayers.every(p => p.bet === maxBet);
+    const allBetsEqual = actablePlayers.every(p => p.bet === maxBet);
 
     const result = allBetsEqual;
     debugLog.bettingRoundCheck(result, {
@@ -289,10 +319,11 @@ export class GameEngine {
     }
     this.lastRaise = 0;
 
-    // 检测是否所有活跃玩家都all in（或只剩一个非all in玩家）
+    // 检测是否所有活跃玩家都all in（或只剩一个还能行动的玩家）
+    // 还能行动 = 未 all-in 且有筹码
     const activePlayers = this.players.filter(p => !p.folded);
-    const nonAllInPlayers = activePlayers.filter(p => !p.allIn);
-    const allInSituation = nonAllInPlayers.length <= 1;
+    const actablePlayers = activePlayers.filter(p => !p.allIn && p.chips > 0);
+    const allInSituation = actablePlayers.length <= 1;
 
     if (allInSituation && this.stage !== GAME_STAGES.RIVER) {
       // 所有人都all in了，直接发完所有公共牌并进入摊牌
@@ -346,10 +377,11 @@ export class GameEngine {
 
     debugLog.stageChange(prevStage, this.stage);
 
-    this.currentPlayerIndex = (this.dealerIndex + 1) % this.players.length;
-    while (this.players[this.currentPlayerIndex].folded) {
-      this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
-    }
+    // 新阶段从庄家后第一个"能行动"的玩家开始（跳过弃牌/all-in/没筹码）
+    const firstActor = this.findActablePlayer((this.dealerIndex + 1) % this.players.length);
+    this.currentPlayerIndex = firstActor === -1
+      ? (this.dealerIndex + 1) % this.players.length
+      : firstActor;
   }
 
   showdown() {

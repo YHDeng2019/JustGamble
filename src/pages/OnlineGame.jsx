@@ -66,6 +66,7 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
   const prevCurrentPlayerIdRef = useRef(null); // 上一次的当前行动玩家ID
   const myTurnStartTimeRef = useRef(null); // 轮到我的时刻（用于决策弹窗延迟）
   const gameStateRef = useRef(null); // 最新游戏状态（供离线检测等回调读取，避免闭包陈旧）
+  const actionBarTimerRef = useRef(null); // ActionBar 延迟显示的计时器（避免重复堆叠）
 
   useEffect(() => {
     let unsubscribe = null;
@@ -533,10 +534,20 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
 
       setActionBarVisible(true);
       setActionBarReady(false);
-      setTimeout(() => {
+      // 清除上一个待执行的计时器，避免旧回合的延迟回调误触发/堆叠
+      if (actionBarTimerRef.current) {
+        clearTimeout(actionBarTimerRef.current);
+      }
+      actionBarTimerRef.current = setTimeout(() => {
         setActionBarReady(true);
+        actionBarTimerRef.current = null;
       }, delay);
     } else {
+      // 不该显示操作栏：清除待执行计时器并隐藏
+      if (actionBarTimerRef.current) {
+        clearTimeout(actionBarTimerRef.current);
+        actionBarTimerRef.current = null;
+      }
       setActionBarVisible(false);
       setActionBarReady(false);
     }

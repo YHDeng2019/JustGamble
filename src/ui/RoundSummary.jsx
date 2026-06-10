@@ -77,7 +77,10 @@ const RoundSummary = ({
           {players.map(player => {
             const isWinner = winnerIds.includes(player.id);
             const winAmount = result.winners?.[player.id] || 0;
-            const profit = player.chips - initialChips;
+            // 本回合盈亏 = 当前筹码 - 本手开始时筹码（而非整局初始筹码）
+            // 回退到 initialChips 以兼容旧数据
+            const baseChips = player.roundStartChips ?? initialChips;
+            const profit = player.chips - baseChips;
             // playerHands[id] 可能是对象 {rank, name, cards, kickers} 或字符串
             const handData = result.playerHands?.[player.id];
             const handName = typeof handData === 'object' ? (handData?.name || '') : (handData || '');
