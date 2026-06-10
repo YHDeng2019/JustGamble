@@ -17,6 +17,7 @@ const RoundSummary = ({
   players,
   result,
   initialChips,
+  communityCards = [],
   onReady,
   onUnready,
   isReady,
@@ -65,6 +66,18 @@ const RoundSummary = ({
             </div>
           )}
         </div>
+
+        {/* 公共牌（只展示已翻出的牌） */}
+        {communityCards && communityCards.length > 0 && (
+          <div className="summary-community">
+            <span className="summary-community-label">公共牌</span>
+            <div className="summary-community-cards">
+              {communityCards.map((card, i) => (
+                <Card key={i} card={card} size="mini" />
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="summary-table">
           <div className="summary-table-header">

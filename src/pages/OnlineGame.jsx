@@ -624,7 +624,8 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
     setRoundSummaryData({
       players: state.players,
       result: result,
-      initialChips: room?.settings?.initialChips || 1000
+      initialChips: room?.settings?.initialChips || 1000,
+      communityCards: state.communityCards || []
     });
     setShowRoundSummary(true);
     setIsReady(true); // 默认已准备，显示"取消准备"按钮
@@ -1148,6 +1149,7 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
           players={roundSummaryData.players}
           result={roundSummaryData.result}
           initialChips={roundSummaryData.initialChips}
+          communityCards={roundSummaryData.communityCards}
           onReady={handleReady}
           onUnready={handleUnready}
           isReady={isReady}

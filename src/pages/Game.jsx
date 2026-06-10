@@ -36,6 +36,7 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
   const [actionBarReady, setActionBarReady] = useState(false); // ActionBar 是否准备好显示（用于连续决策间隔）
   const [allInFlash, setAllInFlash] = useState(null); // ALL IN 戏剧效果（玩家名）
   const [yourTurn, setYourTurn] = useState(false); // 是否轮到人类玩家（用于提示）
+  const [showTurnNotice, setShowTurnNotice] = useState(false); // 轮到你下注的花字闪现
   const [showSettingsMenu, setShowSettingsMenu] = useState(false); // 设置下拉菜单
   const [showHandGuide, setShowHandGuide] = useState(false); // 牌型说明弹窗
   const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 }); // 下拉菜单位置
@@ -102,6 +103,12 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
       // 刚转入人类回合
       setYourTurn(true);
       playSound('yourturn', !soundEnabled);
+
+      // 显示居中花字提示（与联机模式对齐）
+      setShowTurnNotice(true);
+      setTimeout(() => {
+        setShowTurnNotice(false);
+      }, 2000); // 2秒后淡出
     } else if (!isHumanTurn && yourTurn) {
       setYourTurn(false);
     }
@@ -434,6 +441,9 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
     playActionSound(action);
     checkAllInDrama(game, currentPlayer.id);
     const newState = game.getGameState();
+
+    // 先重置 actionBarReady，避免 setGameState 触发 effect 时操作栏短暂显示（闪烁）
+    setActionBarReady(false);
     setGameState({ ...newState });
 
     if (newState.stage === GAME_STAGES.RESULT) {
@@ -518,7 +528,8 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
     setRoundSummaryData({
       players: currentGame.players,
       result: result,
-      initialChips: currentUser.settings.initialChips
+      initialChips: currentUser.settings.initialChips,
+      communityCards: currentGame.communityCards || []
     });
     setShowRoundSummary(true);
 
@@ -754,6 +765,13 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
         document.body
       )}
 
+      {/* 轮到你下注的花字提示（与联机模式对齐） */}
+      {showTurnNotice && (
+        <div className="your-turn-notice">
+          轮到您下注
+        </div>
+      )}
+
       <Table
         gameState={gameState}
         aiStatus={aiStatus}
@@ -964,6 +982,7 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
           players={roundSummaryData.players}
           result={roundSummaryData.result}
           initialChips={roundSummaryData.initialChips}
+          communityCards={roundSummaryData.communityCards}
           isOnlineMode={false}
         />
       )}
