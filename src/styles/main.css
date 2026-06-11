@@ -1309,7 +1309,13 @@ body {
 }
 
 .stealth-mode .action-bar-wrapper {
-  bottom: 180px;
+  bottom: 130px;
+}
+
+.stealth-mode .turn-dot {
+  color: #000;
+  filter: none;
+  animation: none !important;
 }
 
 .stealth-mode .action-bar-header {

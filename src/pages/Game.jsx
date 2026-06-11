@@ -212,7 +212,7 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
         setGameState({ ...currentGame.getGameState() });
         setTimeout(() => {
           finishRound(currentGame, result);
-        }, 1500);
+        }, 2000);
       } else {
         const activePlayers = state.players.filter(p => !p.folded);
         const winner = activePlayers[0];
@@ -223,7 +223,7 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
         };
         setTimeout(() => {
           finishRound(currentGame, result);
-        }, 500);
+        }, 2000);
       }
       return;
     }
@@ -241,7 +241,7 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
       };
       setTimeout(() => {
         finishRound(currentGame, result);
-      }, 500);
+      }, 2000);
       return;
     }
 

@@ -72,15 +72,12 @@ const ActionBar = ({ actions, onAction, disabled, pot }) => {
 
   return (
     <div className="action-bar-wrapper">
-      {/* 顶部标题栏 */}
-      <div className="action-bar-header">
-        <span className="turn-indicator">🎯 你的回合</span>
-      </div>
-
       {/* 决策按钮区域 */}
       <div className="action-bar">
         {!showRaisePanel ? (
           <>
+            {/* 回合指示小圆点 */}
+            <span className="turn-dot" title="你的回合">●</span>
             {/* 主要操作按钮 */}
             {mainActions.map(action => {
               let btnClass = 'btn action-btn';
@@ -160,18 +157,18 @@ const ActionBar = ({ actions, onAction, disabled, pot }) => {
                 >
                   最小
                 </button>
-                {pot && (
+                {pot > 0 && (
                   <>
                     <button
                       className="btn btn-small quick-btn-inline"
-                      onClick={() => handleQuickRaise(Math.floor(pot * 0.5))}
+                      onClick={() => handleQuickRaise(raiseAction.min + Math.floor(pot * 0.5))}
                       disabled={disabled}
                     >
                       1/2池
                     </button>
                     <button
                       className="btn btn-small quick-btn-inline"
-                      onClick={() => handleQuickRaise(pot)}
+                      onClick={() => handleQuickRaise(raiseAction.min + pot)}
                       disabled={disabled}
                     >
                       全池

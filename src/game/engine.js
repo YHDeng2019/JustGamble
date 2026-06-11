@@ -311,7 +311,7 @@ export class GameEngine {
     return result;
   }
 
-  nextStage() {
+  nextStage(skipAllInFastForward = false) {
     const prevStage = this.stage;
     for (const player of this.players) {
       player.bet = 0;
@@ -325,7 +325,9 @@ export class GameEngine {
     const actablePlayers = activePlayers.filter(p => !p.allIn && p.chips > 0);
     const allInSituation = actablePlayers.length <= 1;
 
-    if (allInSituation && this.stage !== GAME_STAGES.RIVER) {
+    // skipAllInFastForward=true 时（all-in 逐张翻牌场景），跳过一次性发牌，
+    // 走下面正常的逐阶段 switch，由调用方控制翻牌节奏
+    if (!skipAllInFastForward && allInSituation && this.stage !== GAME_STAGES.RIVER) {
       // 所有人都all in了，直接发完所有公共牌并进入摊牌
       this.addLog('系统', '所有玩家已all in，直接亮牌');
 

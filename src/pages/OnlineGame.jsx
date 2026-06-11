@@ -68,6 +68,15 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
   const gameStateRef = useRef(null); // 最新游戏状态（供离线检测等回调读取，避免闭包陈旧）
   const actionBarTimerRef = useRef(null); // ActionBar 延迟显示的计时器（避免重复堆叠）
   const nextRoundTimerRef = useRef(null); // 下一轮的5秒宽限计时器（取消准备时清除）
+  const mountedRef = useRef(true); // 组件是否挂载（防止卸载后回调误触发音效/状态更新）
+
+  // 追踪挂载状态：卸载时置 false，阻止残留回调播放音效
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     let unsubscribe = null;
@@ -581,24 +590,32 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
     // 从 lastShowdownResult 或构造获胜结果
     const result = engineRef.current?.engine?.lastShowdownResult;
 
+    // 延迟2秒再弹出回合小结，让玩家看清最后的决策（fold/check等）和摊牌
     if (!result) {
       // 没有摊牌数据，说明是弃牌结束
       const activePlayers = state.players.filter(p => !p.folded);
       if (activePlayers.length >= 1) {
         const winner = activePlayers[0];
-        displayRoundSummary({
-          winners: { [winner.id]: state.pot },
-          playerHands: {},
-          bestHand: ''
-        }, state);
+        setTimeout(() => {
+          displayRoundSummary({
+            winners: { [winner.id]: state.pot },
+            playerHands: {},
+            bestHand: ''
+          }, state);
+        }, 2000);
       }
       return;
     }
 
-    displayRoundSummary(result, state);
+    setTimeout(() => {
+      displayRoundSummary(result, state);
+    }, 2000);
   };
 
   const displayRoundSummary = async (result, state) => {
+    // 组件已卸载（玩家已返回主页），不播放音效/更新状态
+    if (!mountedRef.current) return;
+
     const winnerIds = Object.keys(result.winners);
 
     setWinnerHighlight(winnerIds);

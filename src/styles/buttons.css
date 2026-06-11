@@ -164,7 +164,7 @@
 
 .action-bar-wrapper {
   position: absolute;
-  bottom: 180px;
+  bottom: 130px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 50;
@@ -175,25 +175,13 @@
   gap: 8px;
 }
 
-/* 顶部标题栏 */
-.action-bar-header {
-  background: linear-gradient(145deg, rgba(0, 245, 255, 0.15), rgba(0, 200, 255, 0.1));
-  border: 2px solid var(--neon-cyan);
-  border-radius: 8px;
-  padding: 6px 16px;
-  box-shadow: var(--glow-cyan);
-  backdrop-filter: blur(8px);
-}
-
-.turn-indicator {
-  font-size: 0.85rem;
-  font-weight: 700;
+/* 回合指示小圆点 - 内嵌在 ActionBar 左侧，不占额外高度 */
+.turn-dot {
   color: var(--neon-cyan);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  font-size: 0.7rem;
+  margin-right: 2px;
+  animation: glowPulse 1.2s ease-in-out infinite;
+  filter: drop-shadow(0 0 6px var(--neon-cyan));
 }
 
 /* 决策按钮区域 */

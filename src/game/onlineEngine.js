@@ -22,6 +22,7 @@ export class OnlineGameEngine {
     this.lastProcessedUpdate = 0; // 防止重复处理（时间戳）
     this.lastProcessedSequence = 0; // 防止乱序（序列号）
     this.aiDecisionPending = false; // AI 决策锁
+    this.quickDealing = false; // all-in 快速翻牌锁，防止重复触发
   }
 
   /**
@@ -601,7 +602,10 @@ export class OnlineGameEngine {
     const allInPlayers = activePlayers.filter(p => p.allIn);
 
     if (allInPlayers.length === activePlayers.length && activePlayers.length > 1) {
-      console.log('[联机引擎] 所有玩家 All-in，快速摊牌');
+      // 加锁防止逐张翻牌过程中重复触发
+      if (this.quickDealing) return;
+      this.quickDealing = true;
+      console.log('[联机引擎] 所有玩家 All-in，开始逐张翻牌');
       this.quickDealToShowdown();
       return;
     }
@@ -637,13 +641,14 @@ export class OnlineGameEngine {
   }
 
   /**
-   * 快速摊牌（所有玩家 All-in 时）
+   * 快速摊牌（所有玩家 All-in 时）- 一张一张地翻公共牌
    */
   async quickDealToShowdown() {
     const db = getFirebaseDB();
 
     const dealNext = async () => {
-      this.engine.nextStage();
+      // 传入 skipAllInFastForward=true，让引擎逐阶段推进（不一次性发完）
+      this.engine.nextStage(true);
       const newState = this.engine.getGameState();
       const nextSequence = (this.lastProcessedSequence || 0) + 1;
 
@@ -659,15 +664,16 @@ export class OnlineGameEngine {
       console.log('[联机引擎] 快速摊牌推进:', newState.stage);
 
       if (newState.stage === 'RESULT') {
+        this.quickDealing = false; // 释放锁
         return; // 结束
       } else {
-        // 单人模式配置：每阶段间隔 400ms
-        setTimeout(() => dealNext(), 400);
+        // 每阶段间隔 1200ms，让玩家看清逐张翻出的公共牌
+        setTimeout(() => dealNext(), 1200);
       }
     };
 
-    // 开始快速摊牌
-    setTimeout(() => dealNext(), 400);
+    // 开始逐张翻牌
+    setTimeout(() => dealNext(), 800);
   }
 
   /**
