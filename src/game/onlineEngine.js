@@ -23,6 +23,7 @@ export class OnlineGameEngine {
     this.lastProcessedSequence = 0; // 防止乱序（序列号）
     this.aiDecisionPending = false; // AI 决策锁
     this.quickDealing = false; // all-in 快速翻牌锁，防止重复触发
+    this.advancingNextHand = false; // 开新一手锁，防止 RESULT 重复触发多个定时器
   }
 
   /**
@@ -80,6 +81,54 @@ export class OnlineGameEngine {
 
     // 房主开始监听非房主玩家的动作
     this.subscribeToPlayerActions();
+  }
+
+  /**
+   * 重新开始游戏（仅房主）- 重置所有玩家筹码，开始新一局
+   */
+  async restartGame(initialChips) {
+    if (!this.isHost) throw new Error('只有房主可以重启游戏');
+    const db = getFirebaseDB();
+
+    // 重置所有玩家筹码和状态
+    this.engine.players.forEach(p => {
+      p.chips = initialChips;
+      p.hand = [];
+      p.bet = 0;
+      p.folded = false;
+      p.allIn = false;
+      p.hasActed = false;
+      p.showHand = false;
+      p.handName = '';
+    });
+
+    // 重新洗牌
+    const seed = Date.now();
+    this.engine.deck = shuffleDeck(createDeck(), seed);
+    this.engine.isFirstHand = true;
+    this.engine.roundsPlayed = 0;
+    this.engine.lastShowdownResult = null;
+    this.quickDealing = false;
+    this.advancingNextHand = false;
+
+    this.engine.startNewHand();
+    this.engine.dealInitialCards();
+
+    const gameState = this.engine.getGameState();
+    const nextSequence = (this.lastProcessedSequence || 0) + 1;
+
+    // 清除 gameOver 标志，推送新游戏状态
+    await update(ref(db, `rooms/${this.roomId}/gameState`), {
+      ...gameState,
+      deckSeed: seed,
+      lastUpdate: Date.now(),
+      sequence: nextSequence,
+      gameOver: false,
+      gameOverWinnerId: null,
+      gameOverWinnerName: ''
+    });
+
+    console.log('[联机引擎] 游戏已重启');
   }
 
   /**
@@ -191,6 +240,11 @@ export class OnlineGameEngine {
   applyServerState(serverState) {
     console.log('[联机引擎] applyServerState 开始 - stage:', serverState.stage, 'currentPlayer:', serverState.currentPlayerIndex, 'isHost:', this.isHost);
 
+    // 保存游戏结束信息（透传给客户端显示胜负界面）
+    this._gameOver = serverState.gameOver || false;
+    this._gameOverWinnerId = serverState.gameOverWinnerId || null;
+    this._gameOverWinnerName = serverState.gameOverWinnerName || '';
+
     // 更新引擎核心状态
     this.engine.stage = serverState.stage;
 
@@ -287,7 +341,10 @@ export class OnlineGameEngine {
 
     return {
       ...state,
-      players: visiblePlayers
+      players: visiblePlayers,
+      gameOver: this._gameOver || false,
+      gameOverWinnerId: this._gameOverWinnerId || null,
+      gameOverWinnerName: this._gameOverWinnerName || ''
     };
   }
 
@@ -556,6 +613,9 @@ export class OnlineGameEngine {
 
     // 处理 SHOWDOWN 阶段 - 延迟后开始新一手
     if (state.stage === 'SHOWDOWN' || state.stage === 'RESULT') {
+      // 加锁防止 RESULT 状态多次推送导致重复开新一手（筹码累积bug根源）
+      if (this.advancingNextHand) return;
+      this.advancingNextHand = true;
       console.log('[联机引擎] 游戏结束，准备开始新一手');
 
       // 单人模式配置：摊牌 toast 显示 6500ms，弃牌 3500ms
@@ -566,8 +626,20 @@ export class OnlineGameEngine {
           const activePlayers = this.engine.players.filter(p => p.chips > 0);
 
           if (activePlayers.length < 2) {
-            console.log('[联机引擎] 游戏结束，玩家不足');
-            // TODO: 显示最终结果界面
+            console.log('[联机引擎] 游戏结束，玩家不足，推送 gameOver');
+            // 推送游戏结束状态，含赢家信息，供客户端显示胜利/失败界面
+            const winner = activePlayers[0] || null;
+            const finalState = this.engine.getGameState();
+            const nextSequence = (this.lastProcessedSequence || 0) + 1;
+            await update(ref(db, `rooms/${this.roomId}/gameState`), {
+              ...finalState,
+              lastUpdate: Date.now(),
+              sequence: nextSequence,
+              gameOver: true,
+              gameOverWinnerId: winner ? winner.id : null,
+              gameOverWinnerName: winner ? winner.name : ''
+            });
+            this.advancingNextHand = false; // 释放锁
             return;
           }
 
@@ -586,10 +658,12 @@ export class OnlineGameEngine {
               sequence: nextSequence
             });
 
+            this.advancingNextHand = false; // 新一手已开始，释放锁
             console.log('[联机引擎] 新一手已开始');
           }, 600);
 
         } catch (err) {
+          this.advancingNextHand = false; // 出错也释放锁
           console.error('[联机引擎] 开始新一手失败:', err);
         }
       }, 8000);

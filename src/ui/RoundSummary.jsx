@@ -31,14 +31,14 @@ const RoundSummary = ({
     if (!players || !result) return;
 
     // 联机模式下，只有当前玩家已准备且没有其他人未准备时才倒计时
-    // 取消准备或有人未准备时暂停倒计时
+    // 默认视为已准备，只有明确标记 false（点击取消准备）才算未准备
     if (isOnlineMode) {
       const someoneUnready = players.some(p => {
         const isBot = p.isBot || p.isHuman === false;
-        return !isBot && !readyStatus[p.id];
+        return !isBot && readyStatus[p.id] === false;
       });
       if (someoneUnready) {
-        setCountdown(5); // 有人未准备，重置倒计时
+        setCountdown(5); // 有人取消准备，重置倒计时
         return;
       }
     }
@@ -61,10 +61,11 @@ const RoundSummary = ({
 
   const winnerIds = Object.keys(result.winners || {});
   const allReady = Object.values(readyStatus).every(status => status === true);
-  // 等待列表只显示未准备的真人玩家，机器人默认已准备不计入
+  // 等待列表只显示明确取消准备（false）的真人玩家
+  // 默认视为已准备（未在 readyStatus 中或为 true 都算准备好）
   const unreadyPlayers = players.filter(p => {
     const isBot = p.isBot || p.isHuman === false;
-    return !isBot && !readyStatus[p.id];
+    return !isBot && readyStatus[p.id] === false;
   });
 
   return (
@@ -164,13 +165,14 @@ const RoundSummary = ({
               </button>
             )}
 
-            {unreadyPlayers.length > 0 && (
+            {unreadyPlayers.length > 0 ? (
               <div className="waiting-info">
                 等待 {unreadyPlayers.map(p => p.name).join('、')} 准备中...
               </div>
-            )}
-            {countdown === 0 && allReady && (
-              <div className="all-ready-info">✓ 所有玩家已准备</div>
+            ) : (
+              <div className="all-ready-info">
+                ✓ 所有玩家已准备{countdown > 0 ? ` · ${countdown}秒后开始` : ''}
+              </div>
             )}
           </div>
         )}

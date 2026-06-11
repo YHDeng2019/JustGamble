@@ -53,6 +53,7 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
   const [readyStatus, setReadyStatus] = useState({}); // 玩家准备状态 {userId: boolean}
   const [isReady, setIsReady] = useState(false); // 当前玩家是否准备
   const [offlinePlayerIds, setOfflinePlayerIds] = useState([]); // 离线玩家ID列表
+  const [gameOver, setGameOver] = useState(null); // 游戏结束信息 {winnerId, winnerName, isWinner}
 
   const engineRef = useRef(null);
   const isHost = room?.hostId === user.userId;
@@ -118,6 +119,20 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
 
           setGameState(state);
           gameStateRef.current = state;
+
+          // 检测游戏结束（有玩家被淘汰，只剩一人有筹码）
+          if (state.gameOver) {
+            const iWon = state.gameOverWinnerId === user.userId;
+            setGameOver({
+              winnerId: state.gameOverWinnerId,
+              winnerName: state.gameOverWinnerName,
+              isWinner: iWon
+            });
+            // 关闭回合小结弹窗
+            setShowRoundSummary(false);
+            setRoundSummaryData(null);
+            playSound(iWon ? 'win' : 'lose', !soundEnabled);
+          }
 
           // 如果不在DEALING阶段，确保dealingComplete为true
           if (state.stage !== GAME_STAGES.DEALING && state.stage !== GAME_STAGES.WAITING) {
@@ -752,6 +767,19 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
     }
   };
 
+  const handleRestart = async () => {
+    if (!isHost || !engineRef.current) return;
+    try {
+      const initialChips = room?.settings?.initialChips || 1000;
+      setGameOver(null);
+      roundEndHandledRef.current = false;
+      await engineRef.current.restartGame(initialChips);
+    } catch (err) {
+      console.error('[联机游戏] 重启游戏失败:', err);
+      setError('重启失败: ' + err.message);
+    }
+  };
+
   const handleExit = async () => {
     const myPlayer = gameState?.players?.find(p => p.id === user.userId);
     const initialChips = room?.settings?.initialChips || 1000;
@@ -1182,7 +1210,7 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
       )}
 
       {/* 回合结束弹窗 */}
-      {showRoundSummary && roundSummaryData && (
+      {showRoundSummary && roundSummaryData && !gameOver && (
         <RoundSummary
           players={roundSummaryData.players}
           result={roundSummaryData.result}
@@ -1195,6 +1223,48 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
           isOnlineMode={true}
           onExit={handleExit}
         />
+      )}
+
+      {/* 游戏结束 - 胜利/失败界面 */}
+      {gameOver && (
+        <div className="result-overlay victory-overlay">
+          <div className={`result-card victory-card ${gameOver.isWinner ? 'result-win' : 'result-lose'}`}>
+            <div className="victory-banner">{gameOver.isWinner ? '🏆' : '💀'}</div>
+            <h1 className="result-title victory-title">
+              {gameOver.isWinner ? '完胜！' : '游戏结束'}
+            </h1>
+            <p className="result-subtitle">
+              {gameOver.isWinner
+                ? '你淘汰了所有对手，赢得最终胜利！'
+                : `${gameOver.winnerName} 赢得了本局游戏`}
+            </p>
+            <div className="victory-stats">
+              <div className="victory-stat">
+                <span className="stat-label">最终筹码</span>
+                <span className="stat-value">
+                  {gameState?.players?.find(p => p.id === user.userId)?.chips ?? 0}
+                </span>
+              </div>
+              <div className="victory-stat">
+                <span className="stat-label">累计对局</span>
+                <span className="stat-value">{sessionHistory.length} 局</span>
+              </div>
+            </div>
+            <div className="result-actions">
+              {isHost && (
+                <button className="btn btn-primary btn-large" onClick={handleRestart}>
+                  🔄 再来一局
+                </button>
+              )}
+              <button className="btn btn-large" onClick={handleExit}>
+                返回大厅
+              </button>
+              {!isHost && (
+                <p className="waiting-host-hint">等待房主开始新的一局...</p>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
