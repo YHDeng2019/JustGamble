@@ -60,15 +60,15 @@ export const saveUsers = (users) => {
   storage.set(STORAGE_KEYS.USERS, users);
 };
 
-// 当前用户使用 sessionStorage，每个标签页独立
+// 当前用户使用 localStorage，持久化跨浏览器会话
 export const getCurrentUser = () => {
-  return sessionStore.get(STORAGE_KEYS.CURRENT_USER);
+  return storage.get(STORAGE_KEYS.CURRENT_USER);
 };
 
 export const setCurrentUser = (userId) => {
-  sessionStore.set(STORAGE_KEYS.CURRENT_USER, userId);
+  storage.set(STORAGE_KEYS.CURRENT_USER, userId);
 };
 
 export const clearCurrentUser = () => {
-  sessionStore.remove(STORAGE_KEYS.CURRENT_USER);
+  storage.remove(STORAGE_KEYS.CURRENT_USER);
 };

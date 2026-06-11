@@ -25,28 +25,33 @@
   overflow: hidden;
 }
 
-/* ============ 正面 ============ */
+/* ============ 正面 - Balatro 风格花色颜色 ============ */
 .card-front {
   background: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.08);
 }
 
 .card-front.suit-heart {
   color: #e74c3c;
+  text-shadow: 0 0 4px rgba(231, 76, 60, 0.3);
 }
 
 .card-front.suit-diamond {
-  color: #3498db;
+  color: var(--neon-cyan);
+  text-shadow: 0 0 6px rgba(0, 245, 255, 0.4);
 }
 
 .card-front.suit-spade {
-  color: #2c3e50;
+  color: var(--neon-purple);
+  text-shadow: 0 0 6px rgba(182, 56, 255, 0.4);
 }
 
 .card-front.suit-club {
-  color: #27ae60;
+  color: var(--neon-green);
+  text-shadow: 0 0 6px rgba(6, 255, 165, 0.4);
 }
 
 /* ============ 角标 ============ */
@@ -293,4 +298,47 @@
   100% {
     transform: rotateY(0deg) scale(1);
   }
+}
+
+/* ============ Balatro 风格卡牌交互效果 ============ */
+
+/* 卡牌悬浮效果 */
+.card:hover .card-front {
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.25),
+    0 0 20px currentColor;
+  transform: translateY(-2px);
+}
+
+/* 获胜卡牌高亮 - 全息彩虹效果 */
+.card.winner-card .card-front {
+  position: relative;
+  box-shadow:
+    0 0 20px rgba(255, 215, 0, 0.8),
+    0 0 40px rgba(255, 215, 0, 0.4);
+  animation: cardFloat 2s ease-in-out infinite;
+}
+
+.card.winner-card .card-front::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: holoScan 2s linear infinite;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* 高亮卡牌（用于最佳牌型） */
+.card.highlight .card-front {
+  box-shadow:
+    0 0 15px var(--neon-gold),
+    0 0 30px var(--neon-gold),
+    0 4px 12px rgba(0, 0, 0, 0.3);
 }

@@ -58,6 +58,103 @@
   }
 }
 
+/* ========== Balatro 风格新增动画 ========== */
+
+/* 按钮弹性动画 */
+@keyframes buttonBounce {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* 光晕脉冲 */
+@keyframes glowPulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px currentColor);
+  }
+  50% {
+    filter: drop-shadow(0 0 20px currentColor);
+  }
+}
+
+/* 强光晕脉冲（用于重要元素） */
+@keyframes glowPulseStrong {
+  0%, 100% {
+    box-shadow: 0 0 15px currentColor, 0 0 30px currentColor;
+  }
+  50% {
+    box-shadow: 0 0 30px currentColor, 0 0 60px currentColor;
+  }
+}
+
+/* 全息扫描效果 */
+@keyframes holoScan {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+/* 彩虹光效（用于特殊状态） */
+@keyframes rainbowGlow {
+  0% { filter: hue-rotate(0deg) drop-shadow(0 0 15px currentColor); }
+  100% { filter: hue-rotate(360deg) drop-shadow(0 0 15px currentColor); }
+}
+
+/* 震动效果（用于 all-in） */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+/* 标题脉冲 */
+@keyframes titlePulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 20px rgba(255, 0, 110, 0.6));
+  }
+  50% {
+    transform: scale(1.02);
+    filter: drop-shadow(0 0 40px rgba(255, 0, 110, 0.8));
+  }
+}
+
+/* 底池脉冲 */
+@keyframes potPulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 15px rgba(255, 214, 10, 0.8));
+  }
+  50% {
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 30px rgba(255, 214, 10, 1));
+  }
+}
+
+/* 涟漪扩散 */
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+/* 卡牌悬浮 */
+@keyframes cardFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+/* 边框流光 */
+@keyframes borderFlow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
 .fade-in {
   animation: fadeIn 0.3s ease;
 }
@@ -80,4 +177,25 @@
 
 .animate-bounce {
   animation: thinkingBounce 1.4s ease-in-out infinite;
+}
+
+/* Balatro 风格动画类 */
+.glow-pulse {
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+.glow-pulse-strong {
+  animation: glowPulseStrong 2s ease-in-out infinite;
+}
+
+.rainbow-glow {
+  animation: rainbowGlow 3s linear infinite;
+}
+
+.shake {
+  animation: shake 0.5s ease;
+}
+
+.card-float {
+  animation: cardFloat 2s ease-in-out infinite;
 }

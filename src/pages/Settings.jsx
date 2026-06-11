@@ -9,7 +9,6 @@ const Settings = ({ onBack, onLogout }) => {
   const [avatar, setAvatar] = useState('');
   const [apiBaseUrl, setApiBaseUrl] = useState('');
   const [apiKey, setApiKey] = useState('');
-  const [showApiKey, setShowApiKey] = useState(false);
   const [aiModel, setAiModel] = useState('');
   const [defaultPlayers, setDefaultPlayers] = useState(4);
   const [initialChips, setInitialChips] = useState(1000);
@@ -219,20 +218,13 @@ const Settings = ({ onBack, onLogout }) => {
 
           <div className="form-group">
             <label>API Key</label>
-            <div className="password-input">
-              <input
-                type={showApiKey ? 'text' : 'password'}
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="输入 API Key"
-              />
-              <button
-                className="btn btn-small"
-                onClick={() => setShowApiKey(!showApiKey)}
-              >
-                {showApiKey ? '隐藏' : '显示'}
-              </button>
-            </div>
+            <input
+              type="password"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder="输入 API Key（不会明文显示）"
+              autoComplete="off"
+            />
           </div>
 
           <div className="form-group">

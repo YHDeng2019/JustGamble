@@ -1,28 +1,57 @@
 :root {
-  --bg-dark: #0d1117;
-  --bg-poker: #0f5132;
+  /* Balatro 风格 - 背景色 */
+  --bg-dark: #0a0014;           /* 深紫黑 */
+  --bg-secondary: #1a0a2e;      /* 深紫 */
+  --bg-tertiary: #16213e;       /* 深蓝紫 */
   --bg-card: #f8f9fa;
   --bg-card-back: #1a1a2e;
-  
-  --neon-gold: #ffd700;
-  --neon-red: #ff4757;
-  --neon-green: #2ed573;
-  --neon-blue: #3742fa;
-  
+
+  /* Balatro 风格 - 霓虹色 */
+  --neon-pink: #ff006e;         /* 霓虹粉 */
+  --neon-cyan: #00f5ff;         /* 霓虹青 */
+  --neon-purple: #b638ff;       /* 霓虹紫 */
+  --neon-gold: #ffd60a;         /* 霓虹金 */
+  --neon-green: #06ffa5;        /* 霓虹绿 */
+  --neon-red: #ff4757;          /* 霓虹红（保留） */
+  --neon-blue: #3742fa;         /* 蓝色（保留兼容） */
+
+  /* 渐变 */
+  --gradient-primary: linear-gradient(135deg, #ff006e 0%, #b638ff 100%);
+  --gradient-secondary: linear-gradient(135deg, #00f5ff 0%, #b638ff 100%);
+  --gradient-gold: linear-gradient(135deg, #ffd60a 0%, #ff8800 100%);
+  --gradient-green: linear-gradient(135deg, #06ffa5 0%, #00d4aa 100%);
+  --gradient-red: linear-gradient(135deg, #ff4757 0%, #ff1744 100%);
+  --gradient-rainbow: linear-gradient(135deg, #ff006e 0%, #b638ff 33%, #00f5ff 66%, #ffd60a 100%);
+
+  /* 文字颜色 */
   --text-primary: #f8f9fa;
   --text-secondary: #adb5bd;
   --text-muted: #6c757d;
-  
-  --border-light: rgba(255, 215, 0, 0.3);
-  --border-dim: rgba(255, 215, 0, 0.15);
-  
-  --shadow-glow: 0 0 20px rgba(255, 215, 0, 0.4);
-  --shadow-dark: 0 8px 32px rgba(0, 0, 0, 0.5);
-  
+
+  /* 边框 */
+  --border-light: rgba(182, 56, 255, 0.4);
+  --border-dim: rgba(182, 56, 255, 0.2);
+  --border-pink: rgba(255, 0, 110, 0.5);
+  --border-cyan: rgba(0, 245, 255, 0.5);
+  --border-gold: rgba(255, 214, 10, 0.5);
+
+  /* 发光效果 */
+  --glow-pink: 0 0 20px rgba(255, 0, 110, 0.6), 0 0 40px rgba(255, 0, 110, 0.3);
+  --glow-cyan: 0 0 20px rgba(0, 245, 255, 0.6), 0 0 40px rgba(0, 245, 255, 0.3);
+  --glow-purple: 0 0 20px rgba(182, 56, 255, 0.6), 0 0 40px rgba(182, 56, 255, 0.3);
+  --glow-gold: 0 0 20px rgba(255, 214, 10, 0.6), 0 0 40px rgba(255, 214, 10, 0.3);
+  --glow-green: 0 0 20px rgba(6, 255, 165, 0.6), 0 0 40px rgba(6, 255, 165, 0.3);
+
+  --shadow-glow: 0 0 20px rgba(182, 56, 255, 0.4);
+  --shadow-dark: 0 8px 32px rgba(0, 0, 0, 0.7);
+
+  /* 过渡 */
   --transition-fast: 0.2s ease;
   --transition-normal: 0.3s ease;
   --transition-slow: 0.5s ease;
-  
+  --transition-bounce: 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+  /* 卡牌尺寸 */
   --card-width: 70px;
   --card-height: 98px;
   --card-radius: 6px;

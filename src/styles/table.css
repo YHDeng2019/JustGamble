@@ -2,11 +2,11 @@
   position: relative;
   width: 100%;
   height: 100%;
-  background: linear-gradient(180deg, #0d1117 0%, #161b22 100%);
+  background: linear-gradient(180deg, var(--bg-dark) 0%, var(--bg-secondary) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: visible; /* 改为 visible，避免裁切右上角的API状态标记 */
+  overflow: visible;
   transition: opacity 0.3s ease;
 }
 
@@ -23,15 +23,19 @@
 .table-felt {
   position: relative;
   width: min(85vw, 90vh * 2.6);
-  height: min(85vw / 1.8, 90vh); /* 从 2.2 改为 1.8，让容器更高 */
+  height: min(85vw / 1.8, 90vh);
   max-width: 1200px;
-  max-height: 600px; /* 从 520px 增加到 600px */
-  background: url('/table.png') center center / contain no-repeat; /* 从 cover 改为 contain，完整显示背景图 */
+  max-height: 600px;
+  background:
+    radial-gradient(ellipse at center, rgba(182, 56, 255, 0.15), transparent 70%),
+    radial-gradient(ellipse at center, var(--bg-secondary), var(--bg-dark)),
+    url('/table.png') center center / contain no-repeat;
   border-radius: 20%;
-  border: none;
+  border: 3px solid transparent;
   box-shadow:
-    0 0 40px rgba(0, 0, 0, 0.5),
-    0 0 80px rgba(0, 0, 0, 0.3);
+    0 0 60px rgba(182, 56, 255, 0.4),
+    inset 0 0 100px rgba(182, 56, 255, 0.1),
+    0 0 120px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -43,8 +47,12 @@
 .table-felt::before {
   content: '';
   position: absolute;
-  inset: 0;
+  inset: -3px;
   border-radius: 20%;
+  background: var(--gradient-primary);
+  z-index: -1;
+  opacity: 0.3;
+  filter: blur(8px);
   pointer-events: none;
 }
 .community-cards {
@@ -58,13 +66,14 @@
 
 .pot-display {
   text-align: center;
-  background: rgba(0, 0, 0, 0.4);
+  background: linear-gradient(145deg, rgba(26, 10, 46, 0.95), rgba(10, 0, 20, 0.9));
   padding: 0.6rem 1.2rem;
   border-radius: 8px;
-  border: 2px solid rgba(255, 215, 0, 0.3);
+  border: 2px solid var(--border-gold);
   position: relative;
   z-index: 10;
   backdrop-filter: blur(4px);
+  box-shadow: var(--glow-gold);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
@@ -74,17 +83,21 @@
 
 @keyframes potBounce {
   0% { transform: scale(1); }
-  40% { transform: scale(1.15); box-shadow: 0 0 20px rgba(255, 215, 0, 0.6); }
+  40% {
+    transform: scale(1.15);
+    box-shadow: 0 0 30px rgba(255, 214, 10, 0.8), 0 0 60px rgba(255, 214, 10, 0.4);
+  }
   70% { transform: scale(0.95); }
   100% { transform: scale(1); }
 }
 
 .pot-label {
   font-size: 0.75rem;
-  color: var(--text-muted);
+  color: var(--neon-cyan);
   text-transform: uppercase;
   letter-spacing: 2px;
   font-weight: 700;
+  text-shadow: 0 0 10px rgba(0, 245, 255, 0.5);
 }
 
 .pot-amount {
@@ -92,6 +105,8 @@
   color: var(--neon-gold);
   font-weight: 800;
   transition: color 0.2s;
+  text-shadow: 0 0 15px rgba(255, 214, 10, 0.8);
+  animation: potPulse 2s ease-in-out infinite;
 }
 
 /* 阶段公告 */
@@ -121,15 +136,16 @@
 /* 下注筹码浮动动画 */
 .player-bet {
   font-size: 0.95rem;
-  color: #FFD700;
+  color: var(--neon-gold);
   font-weight: 700;
   margin-top: 0.3rem;
   padding: 0.2rem 0.5rem;
-  background: rgba(255, 215, 0, 0.15);
+  background: linear-gradient(145deg, rgba(255, 214, 10, 0.2), rgba(255, 136, 0, 0.15));
   border-radius: 6px;
-  border: 1px solid rgba(255, 215, 0, 0.4);
+  border: 1px solid var(--border-gold);
   animation: betAppear 0.3s ease;
-  box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+  box-shadow: 0 0 15px rgba(255, 214, 10, 0.4);
+  text-shadow: 0 0 8px rgba(255, 214, 10, 0.6);
 }
 
 @keyframes betAppear {
@@ -149,10 +165,10 @@
 }
 
 .player-info {
-  background: rgba(0, 0, 0, 0.55);
+  background: linear-gradient(145deg, rgba(26, 10, 46, 0.85), rgba(10, 0, 20, 0.8));
   padding: 0.5rem 0.7rem;
   border-radius: 10px;
-  border: 2px solid rgba(255, 215, 0, 0.2);
+  border: 2px solid var(--border-dim);
   text-align: center;
   min-width: 90px;
   max-width: 140px;
@@ -161,20 +177,20 @@
 }
 
 .player-seat.active .player-info {
-  border-color: var(--neon-gold);
-  box-shadow: 0 0 20px rgba(255, 215, 0, 0.4), 0 0 40px rgba(255, 215, 0, 0.2);
-  background: rgba(0, 0, 0, 0.7);
-  transform: scale(1.05);
+  border-color: var(--neon-cyan);
+  box-shadow: var(--glow-cyan);
+  background: linear-gradient(145deg, rgba(0, 245, 255, 0.15), rgba(26, 10, 46, 0.9));
+  transform: scale(1.08);
 }
 
 .player-seat.folded {
-  opacity: 0.4;
-  filter: grayscale(50%);
+  opacity: 0.35;
+  filter: grayscale(80%);
   transition: opacity 0.4s ease, filter 0.4s ease;
 }
 
 .player-seat.folded .player-info {
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.5);
   border-color: rgba(100, 100, 100, 0.3);
 }
 
@@ -189,7 +205,8 @@
   color: var(--neon-red);
   text-transform: uppercase;
   letter-spacing: 2px;
-  opacity: 0.8;
+  opacity: 0.9;
+  text-shadow: 0 0 8px rgba(255, 71, 87, 0.8);
   z-index: 25;
   white-space: nowrap;
   animation: fadeIn 0.3s ease;
