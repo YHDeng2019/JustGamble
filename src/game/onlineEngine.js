@@ -455,7 +455,10 @@ export class OnlineGameEngine {
             pot: latestState.pot,
             stack: latestCurrentPlayer.chips,
             bet: latestCurrentPlayer.bet,
-            style: latestCurrentPlayer.style
+            style: latestCurrentPlayer.style,
+            stage: latestState.stage,
+            position: latestState.currentPlayerIndex,
+            numPlayers: latestState.players.length
           });
 
           console.log(`[联机引擎] AI ${latestCurrentPlayer.name} 决策结果: ${decision.action} ${decision.amount || 0}`);

@@ -148,6 +148,75 @@
   text-shadow: 0 0 8px rgba(255, 214, 10, 0.6);
 }
 
+.player-check-badge {
+  font-size: 0.9rem;
+  color: var(--neon-cyan);
+  font-weight: 600;
+  margin-top: 0.3rem;
+  padding: 0.2rem 0.5rem;
+  background: linear-gradient(145deg, rgba(0, 255, 255, 0.15), rgba(0, 200, 255, 0.1));
+  border-radius: 6px;
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  animation: checkAppear 0.3s ease;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+  text-shadow: 0 0 6px rgba(0, 255, 255, 0.5);
+}
+
+@keyframes checkAppear {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.chat-bubble {
+  position: absolute;
+  bottom: 110%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.95);
+  color: #333;
+  padding: 0.5rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  max-width: 150px;
+  word-wrap: break-word;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  animation: bubbleAppear 0.3s ease;
+  z-index: 100;
+}
+
+.chat-bubble-arrow {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid rgba(255, 255, 255, 0.95);
+}
+
+.chat-bubble-text {
+  line-height: 1.3;
+}
+
+@keyframes bubbleAppear {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
 @keyframes betAppear {
   0% { opacity: 0; transform: translateY(6px); }
   100% { opacity: 1; transform: translateY(0); }

@@ -48,6 +48,7 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
   const [showChatBox, setShowChatBox] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
+  const [chatBubbles, setChatBubbles] = useState({}); // 玩家头像气泡 {userId: {text, timestamp}}
   const [showRoundSummary, setShowRoundSummary] = useState(false);
   const [roundSummaryData, setRoundSummaryData] = useState(null);
   const [readyStatus, setReadyStatus] = useState({}); // 玩家准备状态 {userId: boolean}
@@ -218,6 +219,23 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
         // 订阅房间聊天
         const unsubscribeChat = subscribeToChatMessages(roomId, (message) => {
           setChatMessages(prev => [...prev.slice(-49), message]); // 保留最近50条
+
+          // 在发送者头像框显示气泡（3秒后自动消失）
+          const bubbleId = `${message.userId}_${message.timestamp}`;
+          setChatBubbles(prev => ({
+            ...prev,
+            [message.userId]: { text: message.message, id: bubbleId }
+          }));
+          setTimeout(() => {
+            setChatBubbles(prev => {
+              if (prev[message.userId]?.id === bubbleId) {
+                const newBubbles = { ...prev };
+                delete newBubbles[message.userId];
+                return newBubbles;
+              }
+              return prev;
+            });
+          }, 3000);
         });
 
         return () => {
@@ -866,6 +884,11 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
 
   const handleSendEmoji = async (emojiId) => {
     try {
+      // 查找表情配置并播放对应音效
+      const emoji = EMOJIS.find(e => e.id === emojiId);
+      if (emoji?.sound) {
+        playSound(emoji.sound, !soundEnabled);
+      }
       await sendEmoji(roomId, user.userId, user.displayName, emojiId);
       setShowEmojiPicker(false);
     } catch (err) {
@@ -1089,6 +1112,7 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
         dealingCards={dealingCards}
         stealthMode={stealthMode}
         allInFlash={allInFlash}
+        chatBubbles={chatBubbles}
       />
 
       {actionBarVisible && actionBarReady && dealingComplete && (

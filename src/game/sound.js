@@ -13,7 +13,13 @@ const AUDIO_SRC = {
   win: '/audio/win.wav',
   yourturn: '/audio/your_turn.mp3',
   menu: '/audio/welcom_bgm.wav',
-  game: '/audio/gaming.mp3'
+  game: '/audio/gaming.mp3',
+  // 表情音效
+  ewww: '/audio/ewwwww.mp3',
+  laugh: '/audio/laugh.mp3',
+  ohmygod: '/audio/oh_my_god.mp3',
+  ohno: '/audio/oh_no.mp3',
+  saywhat: '/audio/say_what.mp3'
 };
 
 // 各 BGM 目标音量（游戏内压低，让牌桌音效穿透）
@@ -237,7 +243,13 @@ export const sfx = {
     sweep(400, 900, 0.3, 'square', 0.08, 0.05);
   },
   click: () => tone(600, 0.04, 'square', 0.05),            // 按钮点击
-  yourturn: () => playSample('yourturn', AUDIO_SRC.yourturn, 0.7)  // 轮到你了：使用真实音频
+  yourturn: () => playSample('yourturn', AUDIO_SRC.yourturn, 0.7),  // 轮到你了：使用真实音频
+  // 表情音效
+  ewww: () => playSample('ewww', AUDIO_SRC.ewww, 0.7),
+  laugh: () => playSample('laugh', AUDIO_SRC.laugh, 0.7),
+  ohmygod: () => playSample('ohmygod', AUDIO_SRC.ohmygod, 0.7),
+  ohno: () => playSample('ohno', AUDIO_SRC.ohno, 0.7),
+  saywhat: () => playSample('saywhat', AUDIO_SRC.saywhat, 0.7)
 };
 
 // 统一播放入口：尊重静音设置

@@ -46,7 +46,10 @@ export const llmAIDecide = async ({
   // 思考节奏由 Game.jsx 的 thinkTime 统一控制，这里不再额外延迟
   if (!settings.apiKey || !settings.apiBaseUrl) {
     console.log(`[AI] ${name} 使用本地AI (未配置LLM)`);
-    const decision = localAIDecide({ hand, community, toCall, pot, stack, bet, style });
+    const decision = localAIDecide({
+      hand, community, toCall, pot, stack, bet, style,
+      stage, position: playerIndex, numPlayers
+    });
     return { ...decision, aiType: 'local' };
   }
 
@@ -193,7 +196,10 @@ ${historyText}
   } catch (error) {
     console.warn(`[LLM] ${name} 决策失败，降级本地:`, error.message);
     debugLog.aiDecisionError(name, error);
-    const decision = localAIDecide({ hand, community, toCall, pot, stack, bet, style });
+    const decision = localAIDecide({
+      hand, community, toCall, pot, stack, bet, style,
+      stage, position: playerIndex, numPlayers
+    });
     return { ...decision, aiType: 'local' };
   }
 };

@@ -6,14 +6,16 @@ import { getFirebaseDB } from './firebase';
  * 支持玩家发送快捷表情到房间
  */
 
-// 预定义表情列表
+// 预定义表情列表（含音效映射）
 export const EMOJIS = [
-  { id: 'nice', emoji: '👍', text: 'Nice!' },
-  { id: 'gg', emoji: '🎮', text: 'GG' },
-  { id: 'laugh', emoji: '😂', text: '哈哈哈' },
-  { id: 'think', emoji: '🤔', text: '让我想想' },
-  { id: 'allIn', emoji: '🔥', text: 'All In!' },
-  { id: 'sad', emoji: '😢', text: '太难了' },
+  { id: 'nice', emoji: '👍', text: 'Nice!', sound: null },
+  { id: 'gg', emoji: '🎮', text: 'GG', sound: null },
+  { id: 'laugh', emoji: '😂', text: '哈哈哈', sound: 'laugh' },
+  { id: 'think', emoji: '🤔', text: '让我想想', sound: null },
+  { id: 'allIn', emoji: '🔥', text: 'All In!', sound: 'ohmygod' },
+  { id: 'sad', emoji: '😢', text: '太难了', sound: 'ohno' },
+  { id: 'shocked', emoji: '😱', text: '震惊', sound: 'saywhat' },
+  { id: 'disgusted', emoji: '🤢', text: '呃...', sound: 'ewww' },
 ];
 
 /**

@@ -1,12 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import Card from './Card';
 
-const PlayerSeat = ({ player, isCurrent, isDealer, position, aiType, isThinking, isWinner, visibleCards, blindLabel }) => {
+const PlayerSeat = ({ player, isCurrent, isDealer, position, aiType, isThinking, isWinner, visibleCards, blindLabel, chatBubble }) => {
   const [actionToast, setActionToast] = useState(null);
   const [prevBet, setPrevBet] = useState(player.bet);
   const [prevFolded, setPrevFolded] = useState(player.folded);
   const [prevCurrent, setPrevCurrent] = useState(isCurrent);
   const [flyingChip, setFlyingChip] = useState(0);
+  const [showCheckBadge, setShowCheckBadge] = useState(false);
+  const [prevHasActed, setPrevHasActed] = useState(player.hasActed);
+
+  // Check 检测：玩家刚行动（hasActed 从 false→true）且 bet=0 且未弃牌
+  useEffect(() => {
+    if (player.hasActed && !prevHasActed && player.bet === 0 && !player.folded) {
+      setShowCheckBadge(true);
+    }
+    // 新一轮开始（hasActed 重置为 false）时清除 check 标志
+    if (!player.hasActed && prevHasActed) {
+      setShowCheckBadge(false);
+    }
+    setPrevHasActed(player.hasActed);
+  }, [player.hasActed, player.bet, player.folded, prevHasActed]);
 
   useEffect(() => {
     // 弃牌检测
@@ -80,6 +94,16 @@ const PlayerSeat = ({ player, isCurrent, isDealer, position, aiType, isThinking,
 
         <div className="player-chips">{player.chips}</div>
         {player.bet > 0 && <div className="player-bet">下注: {player.bet}</div>}
+        {showCheckBadge && player.bet === 0 && !player.folded && (
+          <div className="player-check-badge">✓ Check</div>
+        )}
+
+        {chatBubble && (
+          <div className="chat-bubble">
+            <div className="chat-bubble-arrow"></div>
+            <div className="chat-bubble-text">{chatBubble}</div>
+          </div>
+        )}
         {player.allIn && <div className="all-in-badge">ALL IN</div>}
 
         {isThinking && !player.isHuman && (

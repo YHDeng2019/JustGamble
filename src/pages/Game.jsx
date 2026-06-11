@@ -362,14 +362,36 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
 
       try {
         if (humanFolded) {
-          decision = localAIDecide({ hand: currentPlayer.hand, community: state.communityCards, toCall, pot: state.pot, stack: currentPlayer.chips, bet: currentPlayer.bet, style: currentPlayer.style });
+          decision = localAIDecide({
+            hand: currentPlayer.hand,
+            community: state.communityCards,
+            toCall,
+            pot: state.pot,
+            stack: currentPlayer.chips,
+            bet: currentPlayer.bet,
+            style: currentPlayer.style,
+            stage: state.stage,
+            position: state.currentPlayerIndex,
+            numPlayers: state.players.length
+          });
           decision.aiType = 'local';
         } else {
           decision = await llmAIDecide(aiDecision);
         }
       } catch (err) {
         debugLog.aiDecisionError(currentPlayer.name, err);
-        decision = localAIDecide({ hand: currentPlayer.hand, community: state.communityCards, toCall, pot: state.pot, stack: currentPlayer.chips, bet: currentPlayer.bet, style: currentPlayer.style });
+        decision = localAIDecide({
+          hand: currentPlayer.hand,
+          community: state.communityCards,
+          toCall,
+          pot: state.pot,
+          stack: currentPlayer.chips,
+          bet: currentPlayer.bet,
+          style: currentPlayer.style,
+          stage: state.stage,
+          position: state.currentPlayerIndex,
+          numPlayers: state.players.length
+        });
         decision.aiType = 'local';
       }
 
