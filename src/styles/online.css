@@ -1,6 +1,9 @@
 /* 联机大厅 */
 .online-lobby {
   padding: 2rem;
+  /* 覆盖 page-container 的居中，避免 Chrome 下内容超出无法滚动 */
+  justify-content: flex-start;
+  -webkit-overflow-scrolling: touch;
 }
 
 .lobby-header {
@@ -131,6 +134,9 @@
 /* 等待室 */
 .waiting-room {
   padding: 2rem;
+  /* 覆盖 page-container 的居中，避免 Chrome 下内容超出无法滚动 */
+  justify-content: flex-start;
+  -webkit-overflow-scrolling: touch;
 }
 
 .room-header {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { subscribeToRoom, leaveRoom, setPlayerReady, addBot, startGame, kickPlayer } from '../services/roomService';
+import { subscribeToRoom, leaveRoom, setPlayerReady, addBot, startGame, kickPlayer, setupDisconnectCleanup, cancelDisconnectCleanup, reconcileRoomHost } from '../services/roomService';
 import { startHeartbeat, stopHeartbeat } from '../services/heartbeatService';
 import { getPersonalities } from '../ai/personalities';
 
@@ -26,14 +26,27 @@ const OnlineWaitingRoom = ({ roomId, user, onGameStart, onBack }) => {
       }
       setRoom(roomData);
 
+      // 检测孤儿房间：房主已断线被移除时自动转让房主
+      // 只让玩家列表中的第一个玩家执行，避免多人竞争
+      const playerIds = Object.keys(roomData.players);
+      const hostMissing = roomData.hostId && !roomData.players[roomData.hostId];
+      if (hostMissing && playerIds[0] === user.userId) {
+        reconcileRoomHost(roomId);
+      }
+
       // 如果游戏已开始，跳转到游戏页面
       if (roomData.status === 'playing') {
+        // 取消等待室的断线清理，由游戏页面接管
+        cancelDisconnectCleanup(roomId, user.userId);
         onGameStart(roomId);
       }
     });
 
     // 启动心跳
     startHeartbeat(roomId, user.userId);
+
+    // 注册断线自动清理：关闭浏览器/断网时Firebase服务器自动移除该玩家
+    setupDisconnectCleanup(roomId, user.userId);
 
     return () => {
       unsubscribe();
@@ -99,6 +112,8 @@ const OnlineWaitingRoom = ({ roomId, user, onGameStart, onBack }) => {
     }
 
     try {
+      // 先取消断线清理，避免与手动移除冲突
+      await cancelDisconnectCleanup(roomId, user.userId);
       await leaveRoom(roomId, user.userId);
       onBack();
     } catch (err) {

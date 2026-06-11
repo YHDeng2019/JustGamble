@@ -1,4 +1,4 @@
-import { ref, set, get, update, remove, push, onValue, off } from 'firebase/database';
+import { ref, set, get, update, remove, push, onValue, off, onDisconnect } from 'firebase/database';
 import { getFirebaseDB } from './firebase';
 import { generateRoomCode, generateRoomId } from '../utils/roomCodeGenerator';
 
@@ -373,4 +373,76 @@ export const updateHeartbeat = async (roomId, userId) => {
     lastHeartbeat: Date.now(),
     isOnline: true
   });
+};
+
+/**
+ * 注册断线自动清理：当客户端断开连接（关闭浏览器、断网、崩溃）时，
+ * Firebase 服务器会自动将该玩家从房间移除。
+ * 这是解决"玩家直接关浏览器后仍留在房间"问题的关键。
+ */
+export const setupDisconnectCleanup = async (roomId, userId) => {
+  const db = getFirebaseDB();
+  const playerRef = ref(db, `rooms/${roomId}/players/${userId}`);
+  try {
+    // 断线时移除该玩家节点（服务器端执行，不依赖客户端）
+    await onDisconnect(playerRef).remove();
+    console.log('[房间] 已注册断线自动清理:', userId);
+  } catch (err) {
+    console.error('[房间] 注册断线清理失败:', err);
+  }
+};
+
+/**
+ * 取消断线清理（正常离开房间或进入游戏时调用，避免误删）
+ */
+export const cancelDisconnectCleanup = async (roomId, userId) => {
+  const db = getFirebaseDB();
+  const playerRef = ref(db, `rooms/${roomId}/players/${userId}`);
+  try {
+    await onDisconnect(playerRef).cancel();
+    console.log('[房间] 已取消断线清理:', userId);
+  } catch (err) {
+    console.error('[房间] 取消断线清理失败:', err);
+  }
+};
+
+/**
+ * 修复孤儿房间：当房主因断线被移除（hostId 指向已不存在的玩家）时，
+ * 转让房主给第一个剩余玩家；若房间已空则删除。
+ * 由客户端在订阅回调中检测并调用（幂等，多人同时调用安全）。
+ */
+export const reconcileRoomHost = async (roomId) => {
+  const db = getFirebaseDB();
+  const roomRef = ref(db, `rooms/${roomId}`);
+  const snapshot = await get(roomRef);
+  if (!snapshot.exists()) return;
+
+  const room = snapshot.val();
+  const playerIds = Object.keys(room.players || {});
+
+  // 房间已空，删除
+  if (playerIds.length === 0) {
+    await remove(roomRef);
+    if (room.isPublic) {
+      await remove(ref(db, `lobby/publicRooms/${roomId}`));
+    }
+    return;
+  }
+
+  // 房主仍在，无需处理
+  if (room.hostId && room.players[room.hostId]) return;
+
+  // 房主已不在，转让给第一个真人玩家（优先），否则第一个玩家
+  const humanIds = playerIds.filter(id => !room.players[id].isBot);
+  const newHostId = humanIds[0] || playerIds[0];
+  await update(roomRef, {
+    hostId: newHostId,
+    updatedAt: Date.now()
+  });
+  if (room.isPublic) {
+    await update(ref(db, `lobby/publicRooms/${roomId}`), {
+      playerCount: playerIds.length
+    });
+  }
+  console.log('[房间] 房主已转让给:', newHostId);
 };
