@@ -1308,8 +1308,18 @@ body {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.stealth-mode .action-bar-container {
-  bottom: 140px;
+.stealth-mode .action-bar-wrapper {
+  bottom: 180px;
+}
+
+.stealth-mode .action-bar-header {
+  background: #fff !important;
+  border: 1px solid #000 !important;
+  box-shadow: none !important;
+}
+
+.stealth-mode .turn-indicator {
+  color: #000;
 }
 
 .stealth-mode .action-bar {
@@ -1323,65 +1333,61 @@ body {
   display: none;
 }
 
-.stealth-mode .raise-panel {
+.stealth-mode .raise-panel-inline {
   background: #f5f5f5 !important;
-  border-color: #000 !important;
-  box-shadow: none !important;
 }
 
-.stealth-mode .raise-label {
+.stealth-mode .raise-label-inline {
   color: #000;
 }
 
-.stealth-mode .raise-input-compact {
+.stealth-mode .btn-close-inline {
+  background: #fff !important;
+  border-color: #000 !important;
+  color: #000;
+}
+
+.stealth-mode .btn-close-inline:hover {
+  background: #f0f0f0 !important;
+}
+
+.stealth-mode .raise-input-inline {
   background: #fff !important;
   border-color: #000 !important;
   color: #000 !important;
   box-shadow: none !important;
 }
 
-.stealth-mode .raise-input-compact:focus {
+.stealth-mode .raise-input-inline:focus {
   border-color: #000 !important;
   background: #fff !important;
   box-shadow: none !important;
 }
 
-.stealth-mode .raise-slider-compact {
+.stealth-mode .raise-slider-inline {
   background: #ccc !important;
 }
 
-.stealth-mode .raise-slider-compact::-webkit-slider-thumb {
+.stealth-mode .raise-slider-inline::-webkit-slider-thumb {
   background: #000 !important;
   box-shadow: none !important;
 }
 
-.stealth-mode .raise-slider-compact::-webkit-slider-thumb:hover {
-  background: #000 !important;
-  box-shadow: none !important;
-  transform: none !important;
-}
-
-.stealth-mode .raise-slider-compact::-moz-range-thumb {
-  background: #000 !important;
-  box-shadow: none !important;
-}
-
-.stealth-mode .raise-slider-compact::-moz-range-thumb:hover {
+.stealth-mode .raise-slider-inline::-webkit-slider-thumb:hover {
   background: #000 !important;
   box-shadow: none !important;
   transform: none !important;
 }
 
-.stealth-mode .hand-hint {
-  background: #fff !important;
-  border: 1px solid #000 !important;
+.stealth-mode .raise-slider-inline::-moz-range-thumb {
+  background: #000 !important;
   box-shadow: none !important;
-  animation: none !important;
 }
 
-.stealth-mode .your-turn-tag {
-  color: #000;
-  animation: none !important;
+.stealth-mode .raise-slider-inline::-moz-range-thumb:hover {
+  background: #000 !important;
+  box-shadow: none !important;
+  transform: none !important;
 }
 
 .stealth-mode .action-bar .btn {
