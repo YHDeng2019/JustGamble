@@ -1020,7 +1020,7 @@ body {
   }
 }
 
-/* ============ 摸鱼模式 ============ */
+/* ============ 摸鱼模式 - 纯黑白设计 ============ */
 .stealth-mode {
   background: #fff !important;
 }
@@ -1029,15 +1029,36 @@ body {
   background: #fff;
 }
 
+/* 移除所有背景渐变和光晕 */
+.stealth-mode .app::before {
+  display: none;
+}
+
+.stealth-mode .menu-bg {
+  background: #fff !important;
+}
+
+.stealth-mode .menu-bg::after {
+  display: none;
+}
+
 .stealth-mode .page-title {
   color: #000;
   text-shadow: none;
+  filter: none;
+  animation: none;
+  background: none;
+  -webkit-text-fill-color: #000;
 }
 
 .stealth-mode .card-panel {
-  background: #fff;
-  border: 1px solid #000;
-  box-shadow: none;
+  background: #fff !important;
+  border: 1px solid #000 !important;
+  box-shadow: none !important;
+}
+
+.stealth-mode .card-panel::before {
+  display: none;
 }
 
 .stealth-mode .card-panel h2,
@@ -1072,16 +1093,32 @@ body {
 }
 
 .stealth-mode .menu-buttons .btn {
-  background: #fff;
-  border: 1px solid #000;
-  color: #000;
+  background: #fff !important;
+  border: 1px solid #000 !important;
+  color: #000 !important;
+  box-shadow: none !important;
+}
+
+.stealth-mode .menu-buttons .btn::before {
+  display: none;
+}
+
+.stealth-mode .menu-buttons .btn:hover {
+  background: #f0f0f0 !important;
+  transform: none !important;
+  box-shadow: none !important;
+  animation: none !important;
 }
 
 .stealth-mode .menu-buttons .btn-primary {
-  background: #fff;
-  border: 2px solid #000;
-  color: #000;
+  background: #000 !important;
+  border: 2px solid #000 !important;
+  color: #fff !important;
   font-weight: bold;
+}
+
+.stealth-mode .menu-buttons .btn-primary:hover {
+  background: #333 !important;
 }
 
 .stealth-mode .menu-bg {
@@ -1098,52 +1135,75 @@ body {
   color: #000;
 }
 
+/* 用户卡片黑白化 */
+.stealth-mode .user-card {
+  background: #fff !important;
+  border: 1px solid #000 !important;
+  box-shadow: none !important;
+}
+
+.stealth-mode .user-card::before {
+  display: none;
+}
+
+.stealth-mode .user-card:hover {
+  background: #f5f5f5 !important;
+  border-color: #000 !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
 .stealth-mode .app::before {
   display: none;
 }
 
 .stealth-mode .game-table {
-  background: #fff;
+  background: #fff !important;
 }
 
 .stealth-mode .table-felt {
-  background: #fff;
-  border: 2px solid #000;
+  background: #fff !important;
+  border: 2px solid #000 !important;
   border-radius: 12px;
-  box-shadow: none;
+  box-shadow: none !important;
 }
 
 .stealth-mode .table-felt::before {
-  border-color: #000;
-  border-width: 1px;
+  display: none;
 }
 
 .stealth-mode .pot-display {
-  background: #fff;
-  border: 1px solid #000;
+  background: #fff !important;
+  border: 1px solid #000 !important;
   backdrop-filter: none;
+  box-shadow: none !important;
+  animation: none !important;
 }
 
 .stealth-mode .pot-label {
   color: #666;
+  text-shadow: none;
 }
 
 .stealth-mode .pot-amount {
   color: #000;
+  text-shadow: none;
+  animation: none !important;
 }
 
 .stealth-mode .player-info {
-  background: #fff;
-  border: 1px solid #000;
+  background: #fff !important;
+  border: 1px solid #000 !important;
   border-radius: 6px;
   backdrop-filter: none;
+  box-shadow: none !important;
 }
 
 .stealth-mode .player-seat.active .player-info {
-  border: 2px solid #000;
-  box-shadow: none;
-  background: #f5f5f5;
-  transform: none;
+  border: 2px solid #000 !important;
+  box-shadow: none !important;
+  background: #f5f5f5 !important;
+  transform: none !important;
 }
 
 .stealth-mode .player-name {
@@ -1156,6 +1216,11 @@ body {
 
 .stealth-mode .player-bet {
   color: #333;
+  background: #f5f5f5 !important;
+  border-color: #000 !important;
+  box-shadow: none !important;
+  text-shadow: none;
+  animation: none !important;
 }
 
 .stealth-mode .player-avatar {
@@ -1191,6 +1256,7 @@ body {
 .stealth-mode .card-face.card-front {
   background: #fff;
   border: 1px solid #000;
+  box-shadow: none !important;
 }
 
 .stealth-mode .card-face.card-front.suit-heart,
@@ -1198,6 +1264,25 @@ body {
 .stealth-mode .card-face.card-front.suit-spade,
 .stealth-mode .card-face.card-front.suit-club {
   color: #000;
+  text-shadow: none;
+}
+
+.stealth-mode .card:hover .card-front {
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.stealth-mode .card.winner-card .card-front {
+  box-shadow: none !important;
+  animation: none !important;
+}
+
+.stealth-mode .card.winner-card .card-front::after {
+  display: none;
+}
+
+.stealth-mode .card.highlight .card-front {
+  box-shadow: none !important;
 }
 
 .stealth-mode .card-face.card-back {
@@ -1224,48 +1309,119 @@ body {
 }
 
 .stealth-mode .action-bar {
-  background: #fff;
-  border: 1px solid #000;
+  background: #fff !important;
+  border: 1px solid #000 !important;
   backdrop-filter: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+.stealth-mode .action-bar::before {
+  display: none;
+}
+
+.stealth-mode .hand-hint {
+  background: #fff !important;
+  border: 1px solid #000 !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+
+.stealth-mode .your-turn-tag {
+  color: #000;
+  animation: none !important;
 }
 
 .stealth-mode .action-bar .btn {
-  background: #fff;
-  border: 1px solid #000;
-  color: #000;
+  background: #fff !important;
+  border: 1px solid #000 !important;
+  color: #000 !important;
+  box-shadow: none !important;
+}
+
+.stealth-mode .action-bar .btn::before {
+  display: none;
 }
 
 .stealth-mode .action-bar .btn:hover {
-  background: #f0f0f0;
-  box-shadow: none;
-  border-color: #000;
-  transform: none;
+  background: #f0f0f0 !important;
+  box-shadow: none !important;
+  border-color: #000 !important;
+  transform: none !important;
+  animation: none !important;
 }
 
 .stealth-mode .action-bar .btn-primary {
-  background: #000;
-  color: #fff;
-  border-color: #000;
+  background: #000 !important;
+  color: #fff !important;
+  border-color: #000 !important;
 }
 
 .stealth-mode .action-bar .btn-primary:hover {
-  background: #333;
+  background: #333 !important;
 }
 
 .stealth-mode .action-bar .btn-danger {
-  background: #fff;
-  color: #000;
-  border-color: #000;
+  background: #fff !important;
+  color: #000 !important;
+  border-color: #000 !important;
 }
 
-.stealth-mode .raise-slider input[type="range"] {
-  background: #ccc;
+.stealth-mode .action-bar .btn-gold {
+  background: #000 !important;
+  color: #fff !important;
+  border-color: #000 !important;
 }
 
-.stealth-mode .raise-slider input[type="range"]::-webkit-slider-thumb {
-  background: #000;
-  box-shadow: none;
+.stealth-mode .raise-controls {
+  background: #f5f5f5 !important;
+  border-color: #000 !important;
+  box-shadow: none !important;
+}
+
+.stealth-mode .raise-amount-display {
+  background: #fff !important;
+  color: #000 !important;
+  text-shadow: none;
+  animation: none !important;
+}
+
+.stealth-mode .raise-number-input {
+  background: #fff !important;
+  border-color: #000 !important;
+  color: #000 !important;
+  box-shadow: none !important;
+}
+
+.stealth-mode .raise-number-input:focus {
+  border-color: #000 !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+.stealth-mode .raise-slider {
+  background: #ccc !important;
+}
+
+.stealth-mode .raise-slider::-webkit-slider-thumb {
+  background: #000 !important;
+  box-shadow: none !important;
+}
+
+.stealth-mode .raise-slider::-webkit-slider-thumb:hover {
+  background: #000 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.stealth-mode .raise-slider::-moz-range-thumb {
+  background: #000 !important;
+  box-shadow: none !important;
+}
+
+.stealth-mode .raise-slider::-moz-range-thumb:hover {
+  background: #000 !important;
+  box-shadow: none !important;
+  transform: none !important;
 }
 
 .stealth-mode .raise-amount {
