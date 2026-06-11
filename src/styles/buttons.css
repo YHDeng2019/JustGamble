@@ -160,26 +160,31 @@
   box-shadow: none;
 }
 
-/* ========== ActionBar - Balatro 风格决策界面 ========== */
+/* ========== ActionBar - 紧凑式决策界面 ========== */
 
-.action-bar {
+.action-bar-container {
   position: absolute;
-  bottom: 160px;
+  bottom: 140px;
   left: 50%;
   transform: translateX(-50%);
+  z-index: 50;
+  max-width: 95vw;
+}
+
+.action-bar {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   background: linear-gradient(145deg, rgba(26, 10, 46, 0.98), rgba(10, 0, 20, 0.98));
-  padding: 14px 18px;
-  border-radius: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
   border: 2px solid transparent;
   box-shadow:
-    0 12px 32px rgba(0, 0, 0, 0.8),
-    inset 0 0 40px rgba(182, 56, 255, 0.1);
+    0 8px 24px rgba(0, 0, 0, 0.8),
+    inset 0 0 30px rgba(182, 56, 255, 0.1);
   backdrop-filter: blur(12px);
-  z-index: 50;
-  max-width: 90vw;
   position: relative;
+  align-items: center;
+  justify-content: center;
 }
 
 .action-bar::before {
@@ -187,25 +192,151 @@
   position: absolute;
   inset: -2px;
   background: var(--gradient-primary);
-  border-radius: 12px;
+  border-radius: 10px;
   z-index: -1;
   opacity: 0.5;
 }
 
-.action-bar .btn-group {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  justify-content: center;
-  margin: 0;
-  flex-wrap: nowrap;
+.action-bar .action-btn {
+  padding: 8px 18px;
+  font-size: 0.85rem;
+  min-width: 70px;
+  white-space: nowrap;
+  font-weight: 700;
 }
 
-.action-bar .action-btn {
-  padding: 10px 16px;
+/* 加注面板 */
+.raise-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: linear-gradient(145deg, rgba(255, 214, 10, 0.12), rgba(255, 136, 0, 0.08));
+  border: 2px solid var(--border-gold);
+  border-radius: 8px;
+  min-width: 280px;
+  box-shadow: inset 0 0 20px rgba(255, 214, 10, 0.15);
+}
+
+.raise-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.raise-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--neon-gold);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.btn-close {
+  padding: 4px 8px;
+  min-width: unset;
+  opacity: 0.7;
   font-size: 0.9rem;
-  min-width: 80px;
-  white-space: nowrap;
+  line-height: 1;
+}
+
+.btn-close:hover {
+  opacity: 1;
+}
+
+.raise-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 紧凑输入框 */
+.raise-input-compact {
+  width: 100%;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid var(--border-gold);
+  border-radius: 6px;
+  color: var(--neon-gold);
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: center;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.raise-input-compact:focus {
+  border-color: var(--neon-gold);
+  background: rgba(255, 214, 10, 0.18);
+  box-shadow: 0 0 15px rgba(255, 214, 10, 0.4);
+}
+
+/* 紧凑滑块 */
+.raise-slider-compact {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgba(182, 56, 255, 0.3), rgba(255, 214, 10, 0.5));
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.raise-slider-compact::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--gradient-gold);
+  cursor: pointer;
+  box-shadow: 0 0 12px rgba(255, 214, 10, 0.8), 0 0 24px rgba(255, 214, 10, 0.4);
+  transition: all var(--transition-fast);
+}
+
+.raise-slider-compact::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 0 20px rgba(255, 214, 10, 1), 0 0 40px rgba(255, 214, 10, 0.6);
+}
+
+.raise-slider-compact::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--gradient-gold);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 12px rgba(255, 214, 10, 0.8), 0 0 24px rgba(255, 214, 10, 0.4);
+  transition: all var(--transition-fast);
+}
+
+.raise-slider-compact::-moz-range-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 0 20px rgba(255, 214, 10, 1), 0 0 40px rgba(255, 214, 10, 0.6);
+}
+
+/* 快捷按钮组 */
+.raise-quick-btns {
+  display: flex;
+  gap: 6px;
+  justify-content: space-between;
+}
+
+.quick-btn {
+  flex: 1;
+  padding: 6px 8px;
+  font-size: 0.75rem;
+  min-width: unset;
+}
+
+/* 确认按钮 */
+.raise-confirm-btn {
+  width: 100%;
+  padding: 10px;
+  font-size: 0.9rem;
+  font-weight: 700;
 }
 
 .action-button {

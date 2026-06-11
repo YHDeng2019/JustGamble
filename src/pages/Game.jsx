@@ -798,6 +798,7 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
             actions={getValidActions()}
             onAction={handleAction}
             disabled={false}
+            pot={gameState.pot}
           />
         </>
       )}

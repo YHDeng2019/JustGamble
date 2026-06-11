@@ -1308,6 +1308,10 @@ body {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
+.stealth-mode .action-bar-container {
+  bottom: 140px;
+}
+
 .stealth-mode .action-bar {
   background: #fff !important;
   border: 1px solid #000 !important;
@@ -1317,6 +1321,55 @@ body {
 
 .stealth-mode .action-bar::before {
   display: none;
+}
+
+.stealth-mode .raise-panel {
+  background: #f5f5f5 !important;
+  border-color: #000 !important;
+  box-shadow: none !important;
+}
+
+.stealth-mode .raise-label {
+  color: #000;
+}
+
+.stealth-mode .raise-input-compact {
+  background: #fff !important;
+  border-color: #000 !important;
+  color: #000 !important;
+  box-shadow: none !important;
+}
+
+.stealth-mode .raise-input-compact:focus {
+  border-color: #000 !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+.stealth-mode .raise-slider-compact {
+  background: #ccc !important;
+}
+
+.stealth-mode .raise-slider-compact::-webkit-slider-thumb {
+  background: #000 !important;
+  box-shadow: none !important;
+}
+
+.stealth-mode .raise-slider-compact::-webkit-slider-thumb:hover {
+  background: #000 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.stealth-mode .raise-slider-compact::-moz-range-thumb {
+  background: #000 !important;
+  box-shadow: none !important;
+}
+
+.stealth-mode .raise-slider-compact::-moz-range-thumb:hover {
+  background: #000 !important;
+  box-shadow: none !important;
+  transform: none !important;
 }
 
 .stealth-mode .hand-hint {

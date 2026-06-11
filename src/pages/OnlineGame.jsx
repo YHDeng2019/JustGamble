@@ -1041,6 +1041,7 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
             actions={getValidActions()}
             onAction={handleAction}
             disabled={false}
+            pot={gameState.pot}
           />
         </>
       )}
