@@ -25,33 +25,29 @@
   overflow: hidden;
 }
 
-/* ============ 正面 - Balatro 风格花色颜色 ============ */
+/* ============ 正面 - 传统花色颜色 ============ */
 .card-front {
   background: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
 }
 
 .card-front.suit-heart {
   color: #e74c3c;
-  text-shadow: 0 0 4px rgba(231, 76, 60, 0.3);
 }
 
 .card-front.suit-diamond {
-  color: var(--neon-cyan);
-  text-shadow: 0 0 6px rgba(0, 245, 255, 0.4);
+  color: #3498db;
 }
 
 .card-front.suit-spade {
-  color: var(--neon-purple);
-  text-shadow: 0 0 6px rgba(182, 56, 255, 0.4);
+  color: #2c3e50;
 }
 
 .card-front.suit-club {
-  color: var(--neon-green);
-  text-shadow: 0 0 6px rgba(6, 255, 165, 0.4);
+  color: #27ae60;
 }
 
 /* ============ 角标 ============ */
@@ -305,8 +301,8 @@
 /* 卡牌悬浮效果 */
 .card:hover .card-front {
   box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.25),
-    0 0 20px currentColor;
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    0 0 16px rgba(255, 215, 0, 0.4);
   transform: translateY(-2px);
 }
 

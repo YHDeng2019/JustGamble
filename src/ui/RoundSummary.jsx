@@ -30,6 +30,19 @@ const RoundSummary = ({
   useEffect(() => {
     if (!players || !result) return;
 
+    // 联机模式下，只有当前玩家已准备且没有其他人未准备时才倒计时
+    // 取消准备或有人未准备时暂停倒计时
+    if (isOnlineMode) {
+      const someoneUnready = players.some(p => {
+        const isBot = p.isBot || p.isHuman === false;
+        return !isBot && !readyStatus[p.id];
+      });
+      if (someoneUnready) {
+        setCountdown(5); // 有人未准备，重置倒计时
+        return;
+      }
+    }
+
     // 倒计时逻辑
     const timer = setInterval(() => {
       setCountdown(prev => {
@@ -42,13 +55,17 @@ const RoundSummary = ({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [players, result]);
+  }, [players, result, isOnlineMode, readyStatus]);
 
   if (!players || !result) return null;
 
   const winnerIds = Object.keys(result.winners || {});
   const allReady = Object.values(readyStatus).every(status => status === true);
-  const unreadyPlayers = players.filter(p => !readyStatus[p.id]);
+  // 等待列表只显示未准备的真人玩家，机器人默认已准备不计入
+  const unreadyPlayers = players.filter(p => {
+    const isBot = p.isBot || p.isHuman === false;
+    return !isBot && !readyStatus[p.id];
+  });
 
   return (
     <div className="round-summary-overlay">
@@ -62,7 +79,7 @@ const RoundSummary = ({
           <h2 className="round-summary-title">🎯 回合小结</h2>
           {isOnlineMode && (
             <div className="countdown-badge">
-              {countdown > 0 ? countdown : '✓'}
+              {unreadyPlayers.length > 0 ? '⏸' : (countdown > 0 ? countdown : '✓')}
             </div>
           )}
         </div>
@@ -94,9 +111,14 @@ const RoundSummary = ({
             // 回退到 initialChips 以兼容旧数据
             const baseChips = player.roundStartChips ?? initialChips;
             const profit = player.chips - baseChips;
-            // playerHands[id] 可能是对象 {rank, name, cards, kickers} 或字符串
+            // 牌型名称：优先用玩家自带的 handName（摊牌时引擎已设置并随状态同步），
+            // 回退到 result.playerHands（可能是对象 {rank,name,...} 或字符串）
             const handData = result.playerHands?.[player.id];
-            const handName = typeof handData === 'object' ? (handData?.name || '') : (handData || '');
+            const resultHandName = typeof handData === 'object' ? (handData?.name || '') : (handData || '');
+            const handName = player.handName || resultHandName;
+            // 是否展示手牌：摊牌玩家（showHand）或有牌型数据，且手牌存在且非牌背
+            const hasRealHand = player.hand && player.hand.length > 0 && !player.hand.some(c => c?.isBack);
+            const showCards = player.showHand && hasRealHand;
 
             return (
               <div
@@ -113,7 +135,7 @@ const RoundSummary = ({
                   {profit > 0 ? '+' : ''}{profit}
                 </div>
                 <div className="col-hand">
-                  {player.showHand && player.hand && player.hand.length > 0 ? (
+                  {showCards ? (
                     <div className="hand-compact">
                       {player.hand.map((card, i) => (
                         <Card key={i} card={card} size="mini" />

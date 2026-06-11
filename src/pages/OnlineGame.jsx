@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 import { OnlineGameEngine } from '../game/onlineEngine';
 import { getRoom, leaveRoom } from '../services/roomService';
 import { getFirebaseDB } from '../services/firebase';
-import { ref, onValue, update, off, get } from 'firebase/database';
+import { ref, onValue, update, off, get, set } from 'firebase/database';
 import { startHeartbeat, stopHeartbeat, isPlayerOnline } from '../services/heartbeatService';
 import { EMOJIS, sendEmoji, subscribeToEmojis } from '../services/emojiService';
 import { sendChatMessage, subscribeToChatMessages } from '../services/chatService';
@@ -67,6 +67,7 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
   const myTurnStartTimeRef = useRef(null); // 轮到我的时刻（用于决策弹窗延迟）
   const gameStateRef = useRef(null); // 最新游戏状态（供离线检测等回调读取，避免闭包陈旧）
   const actionBarTimerRef = useRef(null); // ActionBar 延迟显示的计时器（避免重复堆叠）
+  const nextRoundTimerRef = useRef(null); // 下一轮的5秒宽限计时器（取消准备时清除）
 
   useEffect(() => {
     let unsubscribe = null;
@@ -252,36 +253,55 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
     const db = getFirebaseDB();
     const readyRef = ref(db, `rooms/${roomId}/roundReady`);
 
+    const startNextRound = () => {
+      console.log('[联机游戏] 所有玩家准备完毕，开始下一轮');
+      setShowRoundSummary(false);
+      setRoundSummaryData(null);
+      setReadyStatus({});
+      setIsReady(false);
+      setWinnerHighlight(null);
+
+      if (engineRef.current) {
+        engineRef.current.engine.startNewRound();
+        const newState = engineRef.current.engine.getGameState();
+        engineRef.current.pushGameState(newState);
+      }
+    };
+
     const listener = onValue(readyRef, (snapshot) => {
       const ready = snapshot.val() || {};
       setReadyStatus(ready);
 
-      // 检查是否所有玩家都准备好
-      if (gameState && gameState.players) {
-        const allReady = gameState.players.every(p => ready[p.id] === true);
+      if (!gameState || !gameState.players || !isHost) return;
 
-        if (allReady && isHost) {
-          // 所有人准备好，房主触发下一轮
-          console.log('[联机游戏] 所有玩家准备完毕，开始下一轮');
-          setShowRoundSummary(false);
-          setRoundSummaryData(null);
-          setReadyStatus({});
-          setIsReady(false);
-          setWinnerHighlight(null);
+      const allReady = gameState.players.every(p => ready[p.id] === true);
 
-          // 房主触发下一轮
-          setTimeout(() => {
-            if (engineRef.current) {
-              engineRef.current.engine.startNewRound();
-              const newState = engineRef.current.engine.getGameState();
-              engineRef.current.pushGameState(newState);
-            }
-          }, 500);
+      if (allReady) {
+        // 全部准备：若尚未启动宽限计时器，则启动5秒倒计时
+        // 5秒内若有人取消准备，计时器会被清除，从而阻止开始
+        if (!nextRoundTimerRef.current) {
+          nextRoundTimerRef.current = setTimeout(() => {
+            nextRoundTimerRef.current = null;
+            startNextRound();
+          }, 5000);
+        }
+      } else {
+        // 有人未准备/取消准备：清除宽限计时器，阻止下一轮开始
+        if (nextRoundTimerRef.current) {
+          clearTimeout(nextRoundTimerRef.current);
+          nextRoundTimerRef.current = null;
+          console.log('[联机游戏] 有玩家取消准备，暂停开始下一轮');
         }
       }
     });
 
-    return () => off(readyRef, 'value', listener);
+    return () => {
+      off(readyRef, 'value', listener);
+      if (nextRoundTimerRef.current) {
+        clearTimeout(nextRoundTimerRef.current);
+        nextRoundTimerRef.current = null;
+      }
+    };
   }, [roomId, showRoundSummary, gameState, isHost]);
 
   // 监听房间玩家心跳，实时计算离线状态（所有玩家可见，不依赖"轮到谁行动"）
@@ -780,8 +800,8 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
   const handleReady = async () => {
     try {
       const db = getFirebaseDB();
-      const readyRef = ref(db, `rooms/${roomId}/roundReady/${user.userId}`);
-      await update(readyRef.parent, { [user.userId]: true });
+      const myReadyRef = ref(db, `rooms/${roomId}/roundReady/${user.userId}`);
+      await set(myReadyRef, true);
       setIsReady(true);
     } catch (err) {
       console.error('[联机游戏] 标记准备失败:', err);
@@ -791,8 +811,8 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
   const handleUnready = async () => {
     try {
       const db = getFirebaseDB();
-      const readyRef = ref(db, `rooms/${roomId}/roundReady/${user.userId}`);
-      await update(readyRef.parent, { [user.userId]: false });
+      const myReadyRef = ref(db, `rooms/${roomId}/roundReady/${user.userId}`);
+      await set(myReadyRef, false);
       setIsReady(false);
     } catch (err) {
       console.error('[联机游戏] 取消准备失败:', err);
