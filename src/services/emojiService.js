@@ -8,10 +8,10 @@ import { getFirebaseDB } from './firebase';
 
 // 预定义表情列表（含音效映射）
 export const EMOJIS = [
-  { id: 'nice', emoji: '👍', text: 'Nice!', sound: null },
-  { id: 'gg', emoji: '🎮', text: 'GG', sound: null },
+  { id: 'nice', emoji: '👍', text: 'Nice!', sound: 'nice' },
+  { id: 'gg', emoji: '🎮', text: 'GG', sound: 'gg' },
   { id: 'laugh', emoji: '😂', text: '哈哈哈', sound: 'laugh' },
-  { id: 'think', emoji: '🤔', text: '让我想想', sound: null },
+  { id: 'think', emoji: '🤔', text: '让我想想', sound: 'think' },
   { id: 'allIn', emoji: '🔥', text: 'All In!', sound: 'ohmygod' },
   { id: 'sad', emoji: '😢', text: '太难了', sound: 'ohno' },
   { id: 'shocked', emoji: '😱', text: '震惊', sound: 'saywhat' },

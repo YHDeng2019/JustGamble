@@ -19,7 +19,10 @@ const AUDIO_SRC = {
   laugh: '/audio/laugh.mp3',
   ohmygod: '/audio/oh_my_god.mp3',
   ohno: '/audio/oh_no.mp3',
-  saywhat: '/audio/say_what.mp3'
+  saywhat: '/audio/say_what.mp3',
+  gg: '/audio/GG.mp3',
+  nice: '/audio/nice.mp3',
+  think: '/audio/think.mp3'
 };
 
 // 各 BGM 目标音量（游戏内压低，让牌桌音效穿透）
@@ -249,7 +252,10 @@ export const sfx = {
   laugh: () => playSample('laugh', AUDIO_SRC.laugh, 0.7),
   ohmygod: () => playSample('ohmygod', AUDIO_SRC.ohmygod, 0.7),
   ohno: () => playSample('ohno', AUDIO_SRC.ohno, 0.7),
-  saywhat: () => playSample('saywhat', AUDIO_SRC.saywhat, 0.7)
+  saywhat: () => playSample('saywhat', AUDIO_SRC.saywhat, 0.7),
+  gg: () => playSample('gg', AUDIO_SRC.gg, 0.7),
+  nice: () => playSample('nice', AUDIO_SRC.nice, 0.7),
+  think: () => playSample('think', AUDIO_SRC.think, 0.7)
 };
 
 // 统一播放入口：尊重静音设置

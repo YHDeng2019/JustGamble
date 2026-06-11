@@ -155,6 +155,47 @@ const balancedDecision = (handStrength, potOdds, toCall, pot, stack, currentBet,
   }
 
   // 面对下注时
+  // 翻前特殊处理：放宽防守范围
+  if (stage === 'PREFLOP') {
+    const isBigBlind = position === 1;
+    const preflopBonus = isBigBlind ? 0.1 : 0.04;
+    const preflopAdjusted = adjustedStrength + preflopBonus;
+
+    // 强牌：加注或跟注
+    if (preflopAdjusted > 0.7) {
+      if (randomFactor < 0.45) {
+        const raiseAmount = Math.min(Math.floor(pot * 0.8) + currentBet + toCall, stack + currentBet);
+        return { action: 'raise', amount: raiseAmount };
+      }
+      return { action: 'call', amount: currentBet + toCall };
+    }
+
+    // 中等牌：宽松跟注（大盲/后位）
+    if (preflopAdjusted > 0.38) {
+      if (isLatePosition || isBigBlind) {
+        return { action: 'call', amount: currentBet + toCall };
+      }
+      // 早位：pot odds 检查
+      if (preflopAdjusted > effectiveOdds * 0.75) {
+        return { action: 'call', amount: currentBet + toCall };
+      }
+    }
+
+    // 弱牌：大盲 20% 防守，后位 12% 诈唬
+    if (isBigBlind && randomFactor < 0.2 && preflopAdjusted > 0.28) {
+      return { action: 'call', amount: currentBet + toCall };
+    }
+    if (isLatePosition && randomFactor < 0.12 && toCall < pot * 0.7) {
+      const raiseAmount = Math.min(Math.floor(pot * 0.75) + currentBet + toCall, stack + currentBet);
+      return { action: 'raise', amount: raiseAmount };
+    }
+
+    // 垃圾牌弃牌（< 0.28 且早位非盲注）
+    if (preflopAdjusted < 0.28 && !isLatePosition && !isBigBlind) {
+      return { action: 'fold', amount: 0 };
+    }
+  }
+
   // 超强牌：70% 加注，30% 跟注
   if (adjustedStrength > 0.85) {
     if (randomFactor < 0.7) {
@@ -279,6 +320,49 @@ const mathematicalDecision = (handStrength, potOdds, toCall, pot, stack, current
 
   // 面对下注时：GTO 混合防守策略
   const effectivePotOdds = potOdds * 0.85; // 降低弃牌阈值（更激进）
+
+  // 翻前特殊处理：放宽防守范围，避免过早弃牌
+  if (stage === 'PREFLOP') {
+    // 大盲位置（position 1）已投入盲注，防守更宽松
+    const isBigBlind = position === 1;
+    const preflopBonus = isBigBlind ? 0.12 : 0.05;
+    const preflopAdjusted = adjustedStrength + preflopBonus;
+
+    // 超强牌/强牌：加注或跟注（同后续逻辑）
+    if (preflopAdjusted > 0.75) {
+      if (randomFactor < 0.55) {
+        const raiseAmount = Math.min(Math.floor(pot * 0.9) + currentBet + toCall, stack + currentBet);
+        return { action: 'raise', amount: raiseAmount };
+      }
+      return { action: 'call', amount: currentBet + toCall };
+    }
+
+    // 中等牌：降低弃牌阈值，只要不是垃圾牌就考虑跟注
+    if (preflopAdjusted > 0.35) {
+      // 后位或大盲：更宽松跟注
+      if (isLatePosition || isBigBlind) {
+        return { action: 'call', amount: currentBet + toCall };
+      }
+      // 早位：pot odds 有利就跟
+      if (preflopAdjusted > effectivePotOdds * 0.7) {
+        return { action: 'call', amount: currentBet + toCall };
+      }
+    }
+
+    // 弱牌：大盲位置 25% 防守，后位 15% 诈唬
+    if (isBigBlind && randomFactor < 0.25 && preflopAdjusted > 0.25) {
+      return { action: 'call', amount: currentBet + toCall };
+    }
+    if (isLatePosition && randomFactor < 0.15 && toCall < pot * 0.6) {
+      const raiseAmount = Math.min(Math.floor(pot * 0.8) + currentBet + toCall, stack + currentBet);
+      return { action: 'raise', amount: raiseAmount };
+    }
+
+    // 真正垃圾牌才弃牌（< 0.25 且早位）
+    if (preflopAdjusted < 0.25 && !isLatePosition && !isBigBlind) {
+      return { action: 'fold', amount: 0 };
+    }
+  }
 
   // 超强牌：80% 加注，20% 跟注（平衡范围）
   if (adjustedStrength > 0.88) {
