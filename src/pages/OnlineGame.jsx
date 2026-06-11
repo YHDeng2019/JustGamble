@@ -118,6 +118,12 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
             // 不要return，继续更新gameState
           }
 
+          // 如果stage已经不是DEALING，但dealingComplete还是false，强制修正（防止卡住）
+          if (state.stage !== GAME_STAGES.DEALING && !dealingComplete) {
+            console.log('[联机游戏] 修正dealingComplete状态（非DEALING阶段）');
+            setDealingComplete(true);
+          }
+
           setGameState(state);
           gameStateRef.current = state;
 
@@ -209,6 +215,12 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
             ...emoji
           };
           setFloatingEmojis(prev => [...prev, newEmoji]);
+
+          // 播放表情音效（所有玩家都听到）
+          const emojiConfig = EMOJIS.find(e => e.id === emoji.emojiId);
+          if (emojiConfig?.sound) {
+            playSound(emojiConfig.sound, !soundEnabled);
+          }
 
           // 3秒后移除
           setTimeout(() => {
@@ -563,7 +575,10 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
       folded: currentPlayer.folded,
       allIn: currentPlayer.allIn,
       chips: currentPlayer.chips,
-      stage: state.stage
+      stage: state.stage,
+      actionBarVisible,
+      actionBarReady,
+      dealingComplete
     });
 
     if (canAct) {
@@ -884,11 +899,6 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
 
   const handleSendEmoji = async (emojiId) => {
     try {
-      // 查找表情配置并播放对应音效
-      const emoji = EMOJIS.find(e => e.id === emojiId);
-      if (emoji?.sound) {
-        playSound(emoji.sound, !soundEnabled);
-      }
       await sendEmoji(roomId, user.userId, user.displayName, emojiId);
       setShowEmojiPicker(false);
     } catch (err) {
