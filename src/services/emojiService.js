@@ -16,6 +16,7 @@ export const EMOJIS = [
   { id: 'sad', emoji: '😢', text: '太难了', sound: 'ohno' },
   { id: 'shocked', emoji: '😱', text: '震惊', sound: 'saywhat' },
   { id: 'disgusted', emoji: '🤢', text: '呃...', sound: 'ewww' },
+  { id: 'damn', emoji: '🖕', text: 'Damn U', sound: 'damn' },
 ];
 
 /**
