@@ -105,128 +105,107 @@ const aggressiveDecision = (handStrength, toCall, pot, stack, currentBet, potOdd
   return { action: 'fold', amount: 0 };
 };
 
-// GTO启发式：平衡型 - 基于pot odds和implied odds
+// GTO启发式：平衡型 - 真人激进风格
 const balancedDecision = (handStrength, potOdds, toCall, pot, stack, currentBet, stage = 'PREFLOP', position = 0, numPlayers = 6) => {
-  // 位置感知
   const isLatePosition = position >= Math.floor(numPlayers / 2);
-  const positionBonus = isLatePosition ? 0.06 : -0.03;
+  const positionBonus = isLatePosition ? 0.15 : 0.05;
   const adjustedStrength = Math.max(0, Math.min(1, handStrength + positionBonus));
-
-  // 考虑隐含赔率（implied odds）
-  const impliedOdds = potOdds * (1 + Math.min(stack / pot, 2) * 0.2);
-  const effectiveOdds = impliedOdds * 0.9; // 更激进的跟注
-
-  // 混合策略
   const randomFactor = Math.random();
 
-  // 没人下注时的策略
+  // 没人下注时 - 更频繁加注
   if (toCall === 0) {
-    // 超强牌：65% 加注，35% 慢打
-    if (adjustedStrength > 0.82) {
+    if (adjustedStrength > 0.75) {
+      if (randomFactor < 0.8) {
+        const raiseAmount = Math.min(Math.floor(pot * 0.75) + currentBet, stack + currentBet);
+        return { action: 'raise', amount: raiseAmount };
+      }
+      return { action: 'check', amount: 0 };
+    }
+
+    if (adjustedStrength > 0.55) {
       if (randomFactor < 0.65) {
-        const raiseAmount = Math.min(Math.floor(pot * 0.7) + currentBet, stack + currentBet);
+        const raiseAmount = Math.min(Math.floor(pot * 0.65) + currentBet, stack + currentBet);
         return { action: 'raise', amount: raiseAmount };
       }
       return { action: 'check', amount: 0 };
     }
 
-    // 强牌：55% 加注
-    if (adjustedStrength > 0.68) {
-      if (randomFactor < 0.55) {
-        const raiseAmount = Math.min(Math.floor(pot * 0.6) + currentBet, stack + currentBet);
-        return { action: 'raise', amount: raiseAmount };
-      }
-      return { action: 'check', amount: 0 };
-    }
-
-    // 中等牌：后位 30% 半诈唬加注
-    if (adjustedStrength > 0.45 && isLatePosition && randomFactor < 0.3) {
-      const raiseAmount = Math.min(Math.floor(pot * 0.5) + currentBet, stack + currentBet);
+    if (adjustedStrength > 0.35 && randomFactor < 0.4) {
+      const raiseAmount = Math.min(Math.floor(pot * 0.55) + currentBet, stack + currentBet);
       return { action: 'raise', amount: raiseAmount };
     }
 
-    // 弱牌：后位 flop/turn 18% 诈唬
-    if (isLatePosition && stage !== 'RIVER' && randomFactor < 0.18 && adjustedStrength > 0.25) {
-      const raiseAmount = Math.min(Math.floor(pot * 0.55) + currentBet, stack + currentBet);
+    if (isLatePosition && randomFactor < 0.3) {
+      const raiseAmount = Math.min(Math.floor(pot * 0.6) + currentBet, stack + currentBet);
       return { action: 'raise', amount: raiseAmount };
     }
 
     return { action: 'check', amount: 0 };
   }
 
-  // 面对下注时
-  // 翻前特殊处理：放宽防守范围
+  // 面对下注时 - 大幅降低弃牌阈值
+  const effectivePotOdds = potOdds * 0.5;
+
+  // 翻前：几乎不弃牌
   if (stage === 'PREFLOP') {
     const isBigBlind = position === 1;
-    const preflopBonus = isBigBlind ? 0.1 : 0.04;
+    const preflopBonus = isBigBlind ? 0.25 : 0.15;
     const preflopAdjusted = adjustedStrength + preflopBonus;
 
-    // 强牌：加注或跟注
-    if (preflopAdjusted > 0.7) {
-      if (randomFactor < 0.45) {
-        const raiseAmount = Math.min(Math.floor(pot * 0.8) + currentBet + toCall, stack + currentBet);
+    if (preflopAdjusted > 0.65) {
+      if (randomFactor < 0.7) {
+        const raiseAmount = Math.min(Math.floor(pot * 0.9) + currentBet + toCall, stack + currentBet);
         return { action: 'raise', amount: raiseAmount };
       }
       return { action: 'call', amount: currentBet + toCall };
     }
 
-    // 中等牌：宽松跟注（大盲/后位）
-    if (preflopAdjusted > 0.38) {
-      if (isLatePosition || isBigBlind) {
-        return { action: 'call', amount: currentBet + toCall };
+    if (preflopAdjusted > 0.28) {
+      if ((isLatePosition || isBigBlind) && randomFactor < 0.35) {
+        const raiseAmount = Math.min(Math.floor(pot * 0.85) + currentBet + toCall, stack + currentBet);
+        return { action: 'raise', amount: raiseAmount };
       }
-      // 早位：pot odds 检查
-      if (preflopAdjusted > effectiveOdds * 0.75) {
-        return { action: 'call', amount: currentBet + toCall };
-      }
-    }
-
-    // 弱牌：大盲 20% 防守，后位 12% 诈唬
-    if (isBigBlind && randomFactor < 0.2 && preflopAdjusted > 0.28) {
       return { action: 'call', amount: currentBet + toCall };
     }
-    if (isLatePosition && randomFactor < 0.12 && toCall < pot * 0.7) {
-      const raiseAmount = Math.min(Math.floor(pot * 0.75) + currentBet + toCall, stack + currentBet);
-      return { action: 'raise', amount: raiseAmount };
+
+    if (preflopAdjusted > 0.18 && (isBigBlind || isLatePosition || randomFactor < 0.4)) {
+      return { action: 'call', amount: currentBet + toCall };
     }
 
-    // 垃圾牌弃牌（< 0.28 且早位非盲注）
-    if (preflopAdjusted < 0.28 && !isLatePosition && !isBigBlind) {
-      return { action: 'fold', amount: 0 };
+    if (toCall < pot * 0.6 && randomFactor < 0.3) {
+      return { action: 'call', amount: currentBet + toCall };
     }
+
+    return { action: 'fold', amount: 0 };
   }
 
-  // 超强牌：70% 加注，30% 跟注
-  if (adjustedStrength > 0.85) {
-    if (randomFactor < 0.7) {
-      const raiseAmount = Math.min(Math.floor(pot * 0.9) + currentBet + toCall, stack + currentBet);
-      return { action: 'raise', amount: raiseAmount };
-    }
-    return { action: 'call', amount: currentBet + toCall };
-  }
-
-  // 强牌：45% 加注，55% 跟注
-  if (adjustedStrength > 0.73) {
-    if (randomFactor < 0.45) {
-      const raiseAmount = Math.min(Math.floor(pot * 0.8) + currentBet + toCall, stack + currentBet);
+  // 翻后：激进防守
+  if (adjustedStrength > 0.8) {
+    if (randomFactor < 0.75) {
+      const raiseAmount = Math.min(Math.floor(pot * 1.1) + currentBet + toCall, stack + currentBet);
       return { action: 'raise', amount: raiseAmount };
     }
     return { action: 'call', amount: currentBet + toCall };
   }
 
-  // 中上牌：隐含赔率范围跟注
-  if (adjustedStrength > effectiveOdds + 0.08) {
+  if (adjustedStrength > 0.65) {
+    if (randomFactor < 0.55) {
+      const raiseAmount = Math.min(Math.floor(pot * 0.95) + currentBet + toCall, stack + currentBet);
+      return { action: 'raise', amount: raiseAmount };
+    }
     return { action: 'call', amount: currentBet + toCall };
   }
 
-  // 中等牌：后位 20% 诈唬加注
-  if (adjustedStrength > effectiveOdds - 0.05 && isLatePosition && randomFactor < 0.2 && stage !== 'RIVER') {
-    const raiseAmount = Math.min(Math.floor(pot * 0.75) + currentBet + toCall, stack + currentBet);
+  if (adjustedStrength > effectivePotOdds) {
+    return { action: 'call', amount: currentBet + toCall };
+  }
+
+  if (isLatePosition && randomFactor < 0.25 && toCall < pot * 0.7) {
+    const raiseAmount = Math.min(Math.floor(pot * 0.85) + currentBet + toCall, stack + currentBet);
     return { action: 'raise', amount: raiseAmount };
   }
 
-  // 边缘跟注
-  if (adjustedStrength > effectiveOdds - 0.03) {
+  if (toCall < pot * 0.5 && adjustedStrength > 0.25) {
     return { action: 'call', amount: currentBet + toCall };
   }
 
@@ -237,12 +216,10 @@ const balancedDecision = (handStrength, potOdds, toCall, pot, stack, currentBet,
 const randomDecision = (toCall, pot, stack, currentBet, handStrength) => {
   const r = Math.random();
 
-  // 极弱牌更容易弃牌
   if (handStrength < 0.2 && r < 0.4 && toCall > 0) {
     return { action: 'fold', amount: 0 };
   }
 
-  // 随机加注
   if (r < 0.35) {
     const aggression = 0.4 + Math.random() * 0.8;
     const raiseAmount = Math.min(
@@ -252,7 +229,6 @@ const randomDecision = (toCall, pot, stack, currentBet, handStrength) => {
     return { action: 'raise', amount: raiseAmount };
   }
 
-  // 随机跟注
   if (toCall > 0 && r < 0.7) {
     return { action: 'call', amount: currentBet + toCall };
   }
@@ -263,146 +239,108 @@ const randomDecision = (toCall, pot, stack, currentBet, handStrength) => {
   return { action: 'fold', amount: 0 };
 };
 
-// GTO启发式：数学型 - 严格基于pot odds + 位置感知 + 混合策略 + 诈唬
+// GTO启发式：数学型 - 真人激进风格
 const mathematicalDecision = (handStrength, potOdds, toCall, pot, stack, currentBet, stage = 'PREFLOP', position = 0, numPlayers = 6) => {
-  // 位置权重：后位（button）更激进，早位更谨慎
   const isLatePosition = position >= Math.floor(numPlayers / 2);
-  const positionBonus = isLatePosition ? 0.08 : -0.05;
+  const positionBonus = isLatePosition ? 0.18 : 0.08;
   const adjustedStrength = Math.max(0, Math.min(1, handStrength + positionBonus));
-
-  // 阶段调整：river 更谨慎，flop 更激进
-  const stageMultiplier = {
-    'PREFLOP': 1.0,
-    'FLOP': 1.15,    // flop 更激进（信息不完整，施压有效）
-    'TURN': 1.0,
-    'RIVER': 0.9     // river 更谨慎（所有牌已出，价值明确）
-  }[stage] || 1.0;
-
-  // 混合策略：引入随机性，避免被对手预测
   const randomFactor = Math.random();
 
-  // 没人下注时的策略
+  // 没人下注时 - 非常激进
   if (toCall === 0) {
-    // 超强牌：70% 加注，30% 慢打（check）
-    if (adjustedStrength > 0.85) {
+    if (adjustedStrength > 0.75) {
+      if (randomFactor < 0.85) {
+        const raiseAmount = Math.min(Math.floor(pot * 0.8) + currentBet, stack + currentBet);
+        return { action: 'raise', amount: raiseAmount };
+      }
+      return { action: 'check', amount: 0 };
+    }
+
+    if (adjustedStrength > 0.55) {
       if (randomFactor < 0.7) {
-        const raiseAmount = Math.min(Math.floor(pot * 0.75 * stageMultiplier) + currentBet, stack + currentBet);
-        return { action: 'raise', amount: raiseAmount };
-      }
-      return { action: 'check', amount: 0 }; // 慢打设陷阱
-    }
-
-    // 强牌：60% 加注（价值下注），40% check
-    if (adjustedStrength > 0.7) {
-      if (randomFactor < 0.6) {
-        const raiseAmount = Math.min(Math.floor(pot * 0.55 * stageMultiplier) + currentBet, stack + currentBet);
+        const raiseAmount = Math.min(Math.floor(pot * 0.7) + currentBet, stack + currentBet);
         return { action: 'raise', amount: raiseAmount };
       }
       return { action: 'check', amount: 0 };
     }
 
-    // 中等牌：20% 加注（诈唬），80% check
-    if (adjustedStrength > 0.4) {
-      if (randomFactor < 0.2 && isLatePosition) {
-        const raiseAmount = Math.min(Math.floor(pot * 0.5) + currentBet, stack + currentBet);
-        return { action: 'raise', amount: raiseAmount };
-      }
-      return { action: 'check', amount: 0 };
-    }
-
-    // 弱牌：后位 15% 诈唬加注，否则 check
-    if (randomFactor < 0.15 && isLatePosition && stage !== 'RIVER') {
-      const raiseAmount = Math.min(Math.floor(pot * 0.6) + currentBet, stack + currentBet);
+    if (adjustedStrength > 0.3 && randomFactor < 0.45) {
+      const raiseAmount = Math.min(Math.floor(pot * 0.65) + currentBet, stack + currentBet);
       return { action: 'raise', amount: raiseAmount };
     }
+
+    if (isLatePosition && randomFactor < 0.35) {
+      const raiseAmount = Math.min(Math.floor(pot * 0.7) + currentBet, stack + currentBet);
+      return { action: 'raise', amount: raiseAmount };
+    }
+
     return { action: 'check', amount: 0 };
   }
 
-  // 面对下注时：GTO 混合防守策略
-  const effectivePotOdds = potOdds * 0.85; // 降低弃牌阈值（更激进）
+  // 面对下注时 - 几乎不弃牌
+  const effectivePotOdds = potOdds * 0.45;
 
-  // 翻前特殊处理：放宽防守范围，避免过早弃牌
+  // 翻前：极度宽松
   if (stage === 'PREFLOP') {
-    // 大盲位置（position 1）已投入盲注，防守更宽松
     const isBigBlind = position === 1;
-    const preflopBonus = isBigBlind ? 0.12 : 0.05;
+    const preflopBonus = isBigBlind ? 0.28 : 0.18;
     const preflopAdjusted = adjustedStrength + preflopBonus;
 
-    // 超强牌/强牌：加注或跟注（同后续逻辑）
-    if (preflopAdjusted > 0.75) {
-      if (randomFactor < 0.55) {
+    if (preflopAdjusted > 0.6) {
+      if (randomFactor < 0.75) {
+        const raiseAmount = Math.min(Math.floor(pot * 1.0) + currentBet + toCall, stack + currentBet);
+        return { action: 'raise', amount: raiseAmount };
+      }
+      return { action: 'call', amount: currentBet + toCall };
+    }
+
+    if (preflopAdjusted > 0.25) {
+      if ((isLatePosition || isBigBlind) && randomFactor < 0.4) {
         const raiseAmount = Math.min(Math.floor(pot * 0.9) + currentBet + toCall, stack + currentBet);
         return { action: 'raise', amount: raiseAmount };
       }
       return { action: 'call', amount: currentBet + toCall };
     }
 
-    // 中等牌：降低弃牌阈值，只要不是垃圾牌就考虑跟注
-    if (preflopAdjusted > 0.35) {
-      // 后位或大盲：更宽松跟注
-      if (isLatePosition || isBigBlind) {
-        return { action: 'call', amount: currentBet + toCall };
-      }
-      // 早位：pot odds 有利就跟
-      if (preflopAdjusted > effectivePotOdds * 0.7) {
-        return { action: 'call', amount: currentBet + toCall };
-      }
-    }
-
-    // 弱牌：大盲位置 25% 防守，后位 15% 诈唬
-    if (isBigBlind && randomFactor < 0.25 && preflopAdjusted > 0.25) {
+    if (preflopAdjusted > 0.15 && (isBigBlind || isLatePosition || randomFactor < 0.45)) {
       return { action: 'call', amount: currentBet + toCall };
     }
-    if (isLatePosition && randomFactor < 0.15 && toCall < pot * 0.6) {
-      const raiseAmount = Math.min(Math.floor(pot * 0.8) + currentBet + toCall, stack + currentBet);
-      return { action: 'raise', amount: raiseAmount };
+
+    if (toCall < pot * 0.7 && randomFactor < 0.35) {
+      return { action: 'call', amount: currentBet + toCall };
     }
 
-    // 真正垃圾牌才弃牌（< 0.25 且早位）
-    if (preflopAdjusted < 0.25 && !isLatePosition && !isBigBlind) {
-      return { action: 'fold', amount: 0 };
-    }
+    return { action: 'fold', amount: 0 };
   }
 
-  // 超强牌：80% 加注，20% 跟注（平衡范围）
-  if (adjustedStrength > 0.88) {
+  // 翻后：极度激进
+  if (adjustedStrength > 0.78) {
     if (randomFactor < 0.8) {
-      const raiseAmount = Math.min(Math.floor(pot * 1.2 * stageMultiplier) + currentBet + toCall, stack + currentBet);
+      const raiseAmount = Math.min(Math.floor(pot * 1.2) + currentBet + toCall, stack + currentBet);
       return { action: 'raise', amount: raiseAmount };
     }
     return { action: 'call', amount: currentBet + toCall };
   }
 
-  // 强牌：55% 加注（价值+保护），45% 跟注
-  if (adjustedStrength > 0.75) {
-    if (randomFactor < 0.55) {
-      const raiseAmount = Math.min(Math.floor(pot * 0.9 * stageMultiplier) + currentBet + toCall, stack + currentBet);
+  if (adjustedStrength > 0.6) {
+    if (randomFactor < 0.6) {
+      const raiseAmount = Math.min(Math.floor(pot * 1.0) + currentBet + toCall, stack + currentBet);
       return { action: 'raise', amount: raiseAmount };
     }
     return { action: 'call', amount: currentBet + toCall };
   }
 
-  // 中上牌：pot odds + 隐含赔率，跟注范围
-  if (adjustedStrength > effectivePotOdds + 0.1) {
+  if (adjustedStrength > effectivePotOdds) {
     return { action: 'call', amount: currentBet + toCall };
   }
 
-  // 中等牌：pot odds 边缘，后位有 25% 诈唬加注
-  if (adjustedStrength > effectivePotOdds - 0.08) {
-    if (randomFactor < 0.25 && isLatePosition && stage !== 'RIVER') {
-      const raiseAmount = Math.min(Math.floor(pot * 0.8) + currentBet + toCall, stack + currentBet);
-      return { action: 'raise', amount: raiseAmount };
-    }
-    // 勉强跟注（隐含赔率）
-    if (adjustedStrength > effectivePotOdds - 0.05) {
-      return { action: 'call', amount: currentBet + toCall };
-    }
-  }
-
-  // 弱牌：10% 纯诈唬（后位 flop/turn），其余弃牌
-  if (randomFactor < 0.1 && isLatePosition && stage !== 'RIVER' && toCall < pot * 0.5) {
-    const raiseAmount = Math.min(Math.floor(pot * 0.7) + currentBet + toCall, stack + currentBet);
+  if (isLatePosition && randomFactor < 0.3 && toCall < pot * 0.8) {
+    const raiseAmount = Math.min(Math.floor(pot * 0.9) + currentBet + toCall, stack + currentBet);
     return { action: 'raise', amount: raiseAmount };
+  }
+
+  if (toCall < pot * 0.6 && adjustedStrength > 0.22) {
+    return { action: 'call', amount: currentBet + toCall };
   }
 
   return { action: 'fold', amount: 0 };
