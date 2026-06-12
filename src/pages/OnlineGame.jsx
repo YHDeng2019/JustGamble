@@ -1152,6 +1152,16 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
         </div>
       )}
 
+      {allInFlash && (
+        <div className="allin-drama">
+          <div className="allin-flash"></div>
+          <div className="allin-text">
+            <span className="allin-big">ALL IN</span>
+            <span className="allin-name">{allInFlash}</span>
+          </div>
+        </div>
+      )}
+
       <GameLog
         logs={gameState.gameLog || []}
         collapsed={logCollapsed}

@@ -436,7 +436,7 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
       } else {
         // 检测阶段切换（PRE_FLOP→FLOP, FLOP→TURN, TURN→RIVER）
         const stageChanged = prevStage !== newState.stage;
-        const stageDelay = stageChanged ? 800 : 0; // 阶段切换时短暂停顿，让玩家看清公共牌
+        const stageDelay = stageChanged ? 800 : 2000; // 阶段切换800ms，同阶段2s人性化停顿
 
         setTimeout(() => {
           processTurn(currentGame, userSettings);
