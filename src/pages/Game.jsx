@@ -821,6 +821,7 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
             onAction={handleAction}
             disabled={false}
             pot={gameState.pot}
+            currentBet={currentPlayer.bet}
           />
         </>
       )}

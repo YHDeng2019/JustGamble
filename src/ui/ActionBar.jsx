@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const ActionBar = ({ actions, onAction, disabled, pot }) => {
+const ActionBar = ({ actions, onAction, disabled, pot, currentBet = 0 }) => {
   const raiseAction = actions.find(a => a.action === 'raise');
   const [raiseAmount, setRaiseAmount] = useState(raiseAction?.min || 0);
   const [inputText, setInputText] = useState(String(raiseAction?.min || 0));
@@ -161,14 +161,14 @@ const ActionBar = ({ actions, onAction, disabled, pot }) => {
                   <>
                     <button
                       className="btn btn-small quick-btn-inline"
-                      onClick={() => handleQuickRaise(raiseAction.min + Math.floor(pot * 0.5))}
+                      onClick={() => handleQuickRaise(currentBet + Math.floor(pot * 0.5))}
                       disabled={disabled}
                     >
                       1/2池
                     </button>
                     <button
                       className="btn btn-small quick-btn-inline"
-                      onClick={() => handleQuickRaise(raiseAction.min + pot)}
+                      onClick={() => handleQuickRaise(currentBet + pot)}
                       disabled={disabled}
                     >
                       全池

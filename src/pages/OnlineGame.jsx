@@ -1141,6 +1141,7 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
             onAction={handleAction}
             disabled={false}
             pot={gameState.pot}
+            currentBet={currentPlayer.bet}
           />
         </>
       )}
