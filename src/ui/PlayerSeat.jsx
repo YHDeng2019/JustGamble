@@ -104,7 +104,7 @@ const PlayerSeat = ({ player, isCurrent, isDealer, position, aiType, isThinking,
             <div className="chat-bubble-text">{chatBubble}</div>
           </div>
         )}
-        {player.allIn && <div className="all-in-badge">ALL IN</div>}
+        {player.allIn && !player.folded && <div className="all-in-badge">ALL IN</div>}
 
         {isThinking && !player.isHuman && (
           <div className="thinking-indicator">
