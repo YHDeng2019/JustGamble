@@ -76,8 +76,13 @@ export class GameEngine {
     for (const player of this.players) {
       player.hand = [];
       player.bet = 0;
-      // 没筹码的玩家本手直接坐庄外（标记弃牌），避免轮转/结算时卡死
-      player.folded = player.chips <= 0;
+      // 没筹码的玩家标记为淘汰（OUT），不是fold
+      if (player.chips <= 0) {
+        player.out = true;
+        player.folded = false;
+      } else {
+        player.folded = false;
+      }
       player.allIn = false;
       player.hasActed = false;
       player.showHand = false;
@@ -150,9 +155,9 @@ export class GameEngine {
     return this.players[this.currentPlayerIndex];
   }
 
-  // 玩家是否还能行动（未弃牌、未 all-in、且有筹码）
+  // 玩家是否还能行动（未弃牌、未 all-in、未淘汰、且有筹码）
   canAct(player) {
-    return !!player && !player.folded && !player.allIn && player.chips > 0;
+    return !!player && !player.folded && !player.allIn && !player.out && player.chips > 0;
   }
 
   // 从 startIndex 起（含）向后查找第一个能行动的玩家下标，找不到返回 -1
@@ -263,7 +268,7 @@ export class GameEngine {
   }
 
   nextPlayer() {
-    const activePlayers = this.players.filter(p => !p.folded);
+    const activePlayers = this.players.filter(p => !p.folded && !p.out);
 
     if (activePlayers.length === 1) {
       this.endHand(activePlayers[0]);
@@ -287,7 +292,7 @@ export class GameEngine {
   }
 
   isBettingRoundComplete() {
-    const activePlayers = this.players.filter(p => !p.folded);
+    const activePlayers = this.players.filter(p => !p.folded && !p.out);
     if (activePlayers.every(p => p.allIn)) return true;
 
     // 只有"还能行动"的玩家（未 all-in 且有筹码）才需要行动且下注相等
@@ -321,7 +326,7 @@ export class GameEngine {
 
     // 检测是否所有活跃玩家都all in（或只剩一个还能行动的玩家）
     // 还能行动 = 未 all-in 且有筹码
-    const activePlayers = this.players.filter(p => !p.folded);
+    const activePlayers = this.players.filter(p => !p.folded && !p.out);
     const actablePlayers = activePlayers.filter(p => !p.allIn && p.chips > 0);
     const allInSituation = actablePlayers.length <= 1;
 
@@ -390,7 +395,7 @@ export class GameEngine {
     this.stage = GAME_STAGES.SHOWDOWN;
     this.addLog('系统', '摊牌！');
 
-    const activePlayers = this.players.filter(p => !p.folded);
+    const activePlayers = this.players.filter(p => !p.folded && !p.out);
     const playerHands = {};
     const bestHandName = {};
 

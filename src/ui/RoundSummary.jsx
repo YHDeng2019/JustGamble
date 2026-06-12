@@ -38,7 +38,7 @@ const RoundSummary = ({
         return !isBot && readyStatus[p.id] === false;
       });
       if (someoneUnready) {
-        setCountdown(5); // 有人取消准备，重置倒计时
+        setCountdown(5); // 有人取消准备，重置倒计时并停止
         return;
       }
     }
@@ -55,7 +55,7 @@ const RoundSummary = ({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [players, result, isOnlineMode, readyStatus]);
+  }, [players, result, isOnlineMode, readyStatus, isReady]);
 
   if (!players || !result) return null;
 

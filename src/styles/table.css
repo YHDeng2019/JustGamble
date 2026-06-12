@@ -281,6 +281,28 @@
   animation: fadeIn 0.3s ease;
 }
 
+.player-seat.out .player-info {
+  background: rgba(0, 0, 0, 0.7);
+  border-color: rgba(80, 80, 80, 0.2);
+  opacity: 0.6;
+}
+
+.player-seat.out::after {
+  content: 'OUT';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.8rem;
+  font-weight: 900;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  opacity: 0.8;
+  z-index: 25;
+  white-space: nowrap;
+}
+
 .player-avatar {
   font-size: 1.6rem;
 }

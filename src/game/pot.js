@@ -9,7 +9,7 @@ export class PotManager {
   }
 
   calculatePots(players) {
-    const activePlayers = players.filter(p => !p.folded);
+    const activePlayers = players.filter(p => !p.folded && !p.out);
 
     // 如果所有玩家的 bet 都是 0（已进入最终结算阶段，bet 已被 nextStage 重置），
     // 直接返回基于 mainPot 的单个 pot
