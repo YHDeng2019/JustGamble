@@ -471,3 +471,33 @@
   gap: 8px;
   align-items: center;
 }
+
+/* 手机端 ActionBar 下移，给桌子区域留更多空间 */
+@media (max-width: 768px) {
+  .action-bar-wrapper {
+    bottom: 80px;
+  }
+
+  .action-bar .action-btn {
+    padding: 8px 14px;
+    font-size: 0.85rem;
+    min-width: 68px;
+  }
+}
+
+@media (max-width: 480px) {
+  .action-bar-wrapper {
+    bottom: 60px;
+  }
+
+  .action-bar {
+    gap: 6px;
+    padding: 10px 10px;
+  }
+
+  .action-bar .action-btn {
+    padding: 8px 10px;
+    font-size: 0.8rem;
+    min-width: 58px;
+  }
+}

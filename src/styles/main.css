@@ -1312,6 +1312,18 @@ body {
   bottom: 130px;
 }
 
+@media (max-width: 768px) {
+  .stealth-mode .action-bar-wrapper {
+    bottom: 80px;
+  }
+}
+
+@media (max-width: 480px) {
+  .stealth-mode .action-bar-wrapper {
+    bottom: 60px;
+  }
+}
+
 .stealth-mode .turn-dot {
   color: #000;
   filter: none;

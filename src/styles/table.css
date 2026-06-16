@@ -725,9 +725,15 @@
 @media (max-width: 768px) {
   .table-felt {
     width: 92vw;
-    height: 46vh;
+    height: 44vh;
+    min-height: 200px;
     border-radius: 18%;
     border-width: 8px;
+  }
+
+  .community-cards {
+    gap: 0.4rem;
+    flex-wrap: nowrap;
   }
 
   .table-felt::before {
@@ -758,8 +764,21 @@
     font-size: 0.75rem;
   }
 
+  .pot-display {
+    padding: 0.35rem 0.8rem;
+  }
+
+  .pot-label {
+    font-size: 0.65rem;
+  }
+
   .pot-amount {
-    font-size: 1.1rem;
+    font-size: 1rem;
+  }
+
+  /* 减少桌子内部 flex gap，让牌有更多空间 */
+  .table-felt {
+    gap: 0.7rem;
   }
 
   .player-seat.seat-top-left {
@@ -784,9 +803,15 @@
 @media (max-width: 480px) {
   .table-felt {
     width: 95vw;
-    height: 48vh;
+    height: 46vh;
+    min-height: 190px;
     border-radius: 16%;
     border-width: 6px;
+  }
+
+  .community-cards {
+    gap: 0.25rem;
+    flex-wrap: nowrap;
   }
 
   .player-seat {
@@ -811,11 +836,20 @@
   }
 
   .pot-display {
-    padding: 0.3rem 0.6rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  .pot-label {
+    font-size: 0.6rem;
   }
 
   .pot-amount {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+  }
+
+  /* 进一步压缩桌内间距 */
+  .table-felt {
+    gap: 0.5rem;
   }
 
   .player-seat.seat-top-left {

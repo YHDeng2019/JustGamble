@@ -171,6 +171,37 @@
   font-size: 1.1rem;
 }
 
+/* 手机端公共牌缩小，防止在椭圆桌内换行或被裁切 */
+@media (max-width: 768px) {
+  .community-cards .card.card-small {
+    width: 44px;
+    height: 63px;
+  }
+  .community-cards .card.card-small .corner-value {
+    font-size: 0.75rem;
+  }
+  .community-cards .card.card-small .center-suit-symbol {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .community-cards .card.card-small {
+    width: 36px;
+    height: 52px;
+    border-radius: 4px;
+  }
+  .community-cards .card.card-small .card-face {
+    border-radius: 4px;
+  }
+  .community-cards .card.card-small .corner-value {
+    font-size: 0.65rem;
+  }
+  .community-cards .card.card-small .center-suit-symbol {
+    font-size: 1.1rem;
+  }
+}
+
 /* ============ 公共牌翻牌动画 ============ */
 .community-card-wrapper {
   display: inline-block;
