@@ -59,7 +59,7 @@
   display: flex;
   gap: 0.6rem;
   position: relative;
-  z-index: 10;
+  z-index: 25;
   flex-wrap: wrap;
   justify-content: center;
 }
@@ -71,7 +71,7 @@
   border-radius: 8px;
   border: 2px solid var(--border-gold);
   position: relative;
-  z-index: 10;
+  z-index: 25;
   backdrop-filter: blur(4px);
   box-shadow: var(--glow-gold);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
