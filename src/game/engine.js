@@ -400,9 +400,13 @@ export class GameEngine {
     const bestHandName = {};
 
     for (const player of activePlayers) {
-      const allCards = [...player.hand, ...this.communityCards];
+      if (!player.hand || player.hand.length < 2) {
+        console.warn('[showdown] 玩家手牌不完整:', player.id, player.name, player.hand);
+      }
+      const allCards = [...(player.hand || []), ...this.communityCards];
       playerHands[player.id] = evaluateHand(allCards);
       bestHandName[player.id] = playerHands[player.id].name;
+      console.log('[showdown]', player.name, '手牌:', (player.hand || []).map(c=>c.id).join(' '), '牌型:', bestHandName[player.id]);
       // 摊牌时翻开手牌并记录牌型
       player.showHand = true;
       player.handName = playerHands[player.id].name;
@@ -460,12 +464,19 @@ export class GameEngine {
         chips: p.chips || 0,
         folded: !!p.folded,
         allIn: !!p.allIn,
-        hasActed: !!p.hasActed
+        hasActed: !!p.hasActed,
+        out: !!p.out,
+        showHand: !!p.showHand,
+        handName: p.handName || null,
+        roundStartChips: p.roundStartChips ?? p.chips ?? 0
       })),
       communityCards: [...this.communityCards],
       pot: this.potManager.mainPot,
       currentPlayerIndex: this.currentPlayerIndex,
       dealerIndex: this.dealerIndex,
+      lastRaise: this.lastRaise || 0,
+      bigBlind: this.bigBlind,
+      smallBlind: this.smallBlind,
       gameLog: [...this.gameLog],
       startTime: this.startTime,
       roundsPlayed: this.roundsPlayed

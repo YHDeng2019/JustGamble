@@ -253,9 +253,14 @@ export class OnlineGameEngine {
       ...p,
       hand: Array.isArray(p.hand) ? [...p.hand] : [],
       bet: p.bet || 0,
+      chips: p.chips || 0,
       folded: !!p.folded,
       allIn: !!p.allIn,
-      hasActed: !!p.hasActed
+      hasActed: !!p.hasActed,
+      out: !!p.out,
+      showHand: !!p.showHand,
+      handName: p.handName || null,
+      roundStartChips: p.roundStartChips ?? p.chips ?? 0
     }));
 
     this.engine.communityCards = serverState.communityCards ? [...serverState.communityCards] : [];

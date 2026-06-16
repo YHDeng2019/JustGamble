@@ -61,15 +61,24 @@ export class PotManager {
         hand: playerHands[id]
       })).filter(h => h.hand);
 
+      // 防御：如果有玩家应在底池但手牌丢失，打印警告
+      if (eligibleHands.length < pot.eligiblePlayers.length) {
+        const missing = pot.eligiblePlayers.filter(id => !playerHands[id]);
+        console.warn('[PotManager] 部分玩家手牌缺失，将被排除出赢家计算:', missing);
+      }
+
       if (eligibleHands.length === 0) continue;
 
       eligibleHands.sort((a, b) => compareHandsFn(b.hand, a.hand));
       const bestHand = eligibleHands[0].hand;
       const winners = eligibleHands.filter(h => compareHandsFn(h.hand, bestHand) === 0);
       const winAmount = Math.floor(pot.amount / winners.length);
+      // 零头给第一个赢家（按座位顺序，通常是最有利位置），防止筹码凭空消失
+      const remainder = pot.amount - winAmount * winners.length;
 
-      for (const winner of winners) {
-        results[winner.id] = (results[winner.id] || 0) + winAmount;
+      for (let i = 0; i < winners.length; i++) {
+        const extra = i === 0 ? remainder : 0;
+        results[winners[i].id] = (results[winners[i].id] || 0) + winAmount + extra;
       }
     }
 
