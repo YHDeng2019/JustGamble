@@ -30,6 +30,7 @@ function App() {
   const [stealthMode, setStealthMode] = useState(false);
   const [soundEnabled, setSoundEnabledState] = useState(isSoundEnabled());
   const [currentRoomId, setCurrentRoomId] = useState(null);
+  const [funMode, setFunMode] = useState(false);
 
   useEffect(() => {
     const sessionUser = getSessionUser();
@@ -78,8 +79,9 @@ function App() {
     setCurrentPage(PAGES.MENU);
   };
 
-  const handleStartGame = (count) => {
+  const handleStartGame = (count, fm = false) => {
     setPlayerCount(count);
+    setFunMode(fm);
     setCurrentPage(PAGES.GAME);
   };
 
@@ -130,6 +132,7 @@ function App() {
         return (
           <Game
             playerCount={playerCount}
+            funMode={funMode}
             onBack={() => setCurrentPage(PAGES.MENU)}
             stealthMode={stealthMode}
             onToggleStealth={() => setStealthMode(!stealthMode)}

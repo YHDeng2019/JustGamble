@@ -9,6 +9,7 @@ import { refreshSessionUser } from '../auth/session';
 import { addGameHistory } from '../auth/userManager';
 import { debugLog } from '../game/debugLog';
 import { playSound } from '../game/sound';
+import { ITEMS, drawRandomItem, getRefreshCost, executeItem, applyShieldSettlement, dealItemsToPlayers } from '../game/itemSystem';
 import Table from '../ui/Table';
 import ActionBar from '../ui/ActionBar';
 import GameLog from '../ui/GameLog';
@@ -16,7 +17,7 @@ import RoundSummary from '../ui/RoundSummary';
 import '../styles/round-summary.css';
 import { v4 as uuidv4 } from 'uuid';
 
-const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled, onToggleSound }) => {
+const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soundEnabled, onToggleSound }) => {
   const [game, setGame] = useState(null);
   const [gameState, setGameState] = useState(null);
   const [logCollapsed, setLogCollapsed] = useState(true); // 默认收起
@@ -42,6 +43,11 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
   const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 }); // 下拉菜单位置
   const [showRoundSummary, setShowRoundSummary] = useState(false); // 回合结束弹窗
   const [roundSummaryData, setRoundSummaryData] = useState(null); // 回合结束数据
+  // 娱乐模式道具状态
+  const [playerItems, setPlayerItems] = useState({}); // { [playerId]: { item, used, refreshCount, refreshCost } }
+  const [itemTargetMode, setItemTargetMode] = useState(null); // 需要目标时设为 itemId
+  const [peekEffect, setPeekEffect] = useState(null); // { type, card, targetName? }
+  const [forceShowEffect, setForceShowEffect] = useState(null); // { targetName, card }
   const countdownRef = React.useRef(null);
   const gameRef = React.useRef(null); // 始终指向当前引擎实例，避免 state 闭包陷阱
   const wasHumanTurnRef = React.useRef(false); // 追踪上一次是否人类回合
@@ -147,6 +153,7 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
 
     setTimeout(() => {
       newGame.dealInitialCards();
+      dealItemsForHand(newGame);
       setGameState(newGame.getGameState());
       // 发牌动画：逐张显示
       animateDealing(newGame, currentUser.settings);
@@ -184,7 +191,107 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
     }, 150); // 从 200ms 改为 150ms，让发牌更流畅
   };
 
-  // 根据动作播放对应音效
+  // 娱乐模式：为所有玩家发道具
+  const dealItemsForHand = (currentGame) => {
+    if (!funMode) return;
+    const bigBlind = currentGame.getGameState().bigBlind || 20;
+    const ids = currentGame.players.map(p => p.id);
+    const items = dealItemsToPlayers(ids);
+    Object.keys(items).forEach(id => {
+      items[id].refreshCost = getRefreshCost(0, bigBlind);
+    });
+    setPlayerItems(items);
+  };
+
+  // 娱乐模式：使用道具（执行效果）
+  const handleUseItem = (targetId) => {
+    const game = gameRef.current;
+    if (!game) return;
+    const humanPlayer = game.players.find(p => p.isHuman);
+    if (!humanPlayer) return;
+    const itemState = playerItems[humanPlayer.id];
+    if (!itemState || itemState.used || !itemState.item) return;
+
+    const { success, effectData } = executeItem(game, itemState.item, humanPlayer.id, targetId);
+    if (!success) return;
+
+    // 音效
+    const soundMap = {
+      swap_hand: 'item_swap', peek_next: 'item_peek', peek_opponent: 'item_peek',
+      replace_hand: 'item_replace_hand', replace_community: 'item_replace_community',
+      shield: 'item_shield', force_show: 'item_force_show'
+    };
+    playSound(soundMap[itemState.item] || 'item_swap', !soundEnabled);
+
+    // 标记已使用
+    setPlayerItems(prev => ({
+      ...prev,
+      [humanPlayer.id]: { ...prev[humanPlayer.id], used: true }
+    }));
+
+    // 私有 peek 效果
+    if (effectData.type === 'peek_next' || effectData.type === 'peek_opponent') {
+      setPeekEffect(effectData);
+      setTimeout(() => setPeekEffect(null), 3000);
+    }
+
+    // force_show 广播给自己（单机直接可见）
+    if (effectData.type === 'force_show') {
+      setForceShowEffect({ targetName: effectData.targetName, card: effectData.card });
+      setTimeout(() => setForceShowEffect(null), 3000);
+    }
+
+    // 更新游戏状态（换牌/公共牌已直接修改 engine）
+    setGameState({ ...game.getGameState() });
+    setItemTargetMode(null);
+  };
+
+  // 娱乐模式：刷新道具
+  const handleRefreshItem = () => {
+    const game = gameRef.current;
+    if (!game) return;
+    const humanPlayer = game.players.find(p => p.isHuman);
+    if (!humanPlayer) return;
+    const itemState = playerItems[humanPlayer.id];
+    if (!itemState) return;
+    const bigBlind = game.getGameState().bigBlind || 20;
+    const cost = getRefreshCost(itemState.refreshCount, bigBlind);
+    if (humanPlayer.chips < cost) return;
+
+    humanPlayer.chips -= cost;
+    const newItem = drawRandomItem();
+    const newCount = itemState.refreshCount + 1;
+    setPlayerItems(prev => ({
+      ...prev,
+      [humanPlayer.id]: {
+        item: newItem,
+        used: false,
+        refreshCount: newCount,
+        refreshCost: getRefreshCost(newCount, bigBlind)
+      }
+    }));
+    playSound('item_refresh', !soundEnabled);
+    setGameState({ ...game.getGameState() });
+  };
+
+  // 娱乐模式：点击使用按钮
+  const handleItemButtonClick = () => {
+    const game = gameRef.current;
+    if (!game) return;
+    const humanPlayer = game.players.find(p => p.isHuman);
+    if (!humanPlayer) return;
+    const itemState = playerItems[humanPlayer.id];
+    if (!itemState || itemState.used || !itemState.item) return;
+    const itemDef = ITEMS[itemState.item];
+    if (!itemDef) return;
+    if (itemDef.needsTarget) {
+      setItemTargetMode(itemState.item);
+    } else {
+      handleUseItem(null);
+    }
+  };
+
+
   const playActionSound = (action) => {
     if (action === 'fold') playSound('fold', !soundEnabled);
     else if (action === 'check') playSound('check', !soundEnabled);
@@ -503,6 +610,11 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
     const currentUser = refreshSessionUser();
     if (!currentUser) return;
 
+    // 娱乐模式 shield 结算
+    if (funMode) {
+      applyShieldSettlement(currentGame.players);
+    }
+
     const winnerIds = Object.keys(result.winners);
     const winnerNames = winnerIds.map(id => currentGame.players.find(p => p.id === id)?.name).filter(Boolean);
 
@@ -608,6 +720,7 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
     currentGame.startNewHand();
     setTimeout(() => {
       currentGame.dealInitialCards();
+      dealItemsForHand(currentGame);
       setGameState(currentGame.getGameState());
       animateDealing(currentGame, currentUser.settings);
     }, 600);
@@ -631,6 +744,7 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
     currentGame.startNewHand();
     setTimeout(() => {
       currentGame.dealInitialCards();
+      dealItemsForHand(currentGame);
       setGameState(currentGame.getGameState());
       animateDealing(currentGame, currentUser.settings);
     }, 500);
@@ -826,6 +940,48 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
         </>
       )}
 
+      {/* 娱乐模式道具卡 */}
+      {funMode && (() => {
+        const humanPlayer = gameRef.current?.players.find(p => p.isHuman);
+        if (!humanPlayer) return null;
+        const itemState = playerItems[humanPlayer.id];
+        if (!itemState || !itemState.item) return null;
+        const itemDef = ITEMS[itemState.item];
+        if (!itemDef) return null;
+        const bigBlind = gameState?.bigBlind || 20;
+        const refreshCost = getRefreshCost(itemState.refreshCount, bigBlind);
+        return (
+          <div className={`item-card-widget${itemState.used ? ' item-used' : ''}`}>
+            <div className="item-card-info">
+              <div className="item-card-icon">
+                <img src={itemDef.icon} className="item-icon-img" alt={itemDef.name} />
+              </div>
+              <div className="item-card-text">
+                <span className="item-card-name">{itemDef.name}</span>
+                <span className="item-card-desc">{itemDef.desc}</span>
+              </div>
+            </div>
+            <div className="item-card-actions">
+              <button
+                className="item-use-btn"
+                disabled={itemState.used}
+                onClick={handleItemButtonClick}
+              >
+                {itemState.used ? '已使用' : '使用'}
+              </button>
+              <button
+                className="item-refresh-btn"
+                disabled={humanPlayer.chips < refreshCost}
+                onClick={handleRefreshItem}
+                title={`刷新费用：${refreshCost} 筹码`}
+              >
+                换({refreshCost})
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
       <GameLog
         logs={gameState.gameLog}
         collapsed={logCollapsed}
@@ -1009,6 +1165,66 @@ const Game = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled,
           communityCards={roundSummaryData.communityCards}
           isOnlineMode={false}
         />
+      )}
+
+      {/* 娱乐模式：目标选择 */}
+      {itemTargetMode && (
+        <div className="item-target-overlay" onClick={() => setItemTargetMode(null)}>
+          <div className="item-target-modal" onClick={e => e.stopPropagation()}>
+            <div className="item-target-title">选择目标</div>
+            <div className="item-target-players">
+              {gameRef.current?.players.filter(p => !p.isHuman && !p.folded && !p.out).map(p => (
+                <button
+                  key={p.id}
+                  className="item-target-player-btn"
+                  onClick={() => handleUseItem(p.id)}
+                >
+                  {p.avatar} {p.name}
+                </button>
+              ))}
+            </div>
+            <button className="item-target-cancel" onClick={() => setItemTargetMode(null)}>取消</button>
+          </div>
+        </div>
+      )}
+
+      {/* 娱乐模式：peek 提示 */}
+      {peekEffect && (
+        <div className="item-peek-toast">
+          {peekEffect.type === 'peek_next' && (
+            <>
+              <span className="peek-label">下一张公共牌：</span>
+              {peekEffect.card && (
+                <span className={`peek-card${['♥','♦'].includes(peekEffect.card.suit) ? ' red' : ''}`}>
+                  {peekEffect.card.suit}{peekEffect.card.value}
+                </span>
+              )}
+            </>
+          )}
+          {peekEffect.type === 'peek_opponent' && (
+            <>
+              <span className="peek-label">{peekEffect.targetName} 的一张牌：</span>
+              {peekEffect.card && (
+                <span className={`peek-card${['♥','♦'].includes(peekEffect.card.suit) ? ' red' : ''}`}>
+                  {peekEffect.card.suit}{peekEffect.card.value}
+                </span>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* 娱乐模式：force_show 提示 */}
+      {forceShowEffect && (
+        <div className="item-force-show-toast">
+          <span className="force-show-icon">🃏</span>
+          <span className="force-show-text">
+            {forceShowEffect.targetName} 的手牌：
+            {forceShowEffect.card && (
+              <strong> {forceShowEffect.card.suit}{forceShowEffect.card.value}</strong>
+            )}
+          </span>
+        </div>
       )}
     </div>
   );

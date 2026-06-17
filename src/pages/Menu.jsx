@@ -5,6 +5,7 @@ import { refreshSessionUser } from '../auth/session';
 const Menu = ({ onStartGame, onOnlineMode, onHistory, onSettings, onSwitchUser, stealthMode, onToggleStealth, soundEnabled, onToggleSound }) => {
   const [user, setUser] = useState(null);
   const [playerCount, setPlayerCount] = useState(4);
+  const [funMode, setFunMode] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 });
   const settingsRef = useRef(null);
@@ -120,10 +121,24 @@ const Menu = ({ onStartGame, onOnlineMode, onHistory, onSettings, onSwitchUser, 
               </div>
             ))}
           </div>
+          <div className="fun-mode-group">
+            <label className="fun-mode-label">
+              <input
+                type="checkbox"
+                checked={funMode}
+                onChange={e => setFunMode(e.target.checked)}
+                style={{ marginTop: '2px' }}
+              />
+              <span className="fun-mode-text">
+                <span>🎪 娱乐模式</span>
+                <span className="fun-mode-hint">每局获得随机道具，可换牌、偷看、护甲等</span>
+              </span>
+            </label>
+          </div>
         </div>
 
         <div className="menu-buttons">
-          <button className="btn btn-primary btn-large" onClick={() => onStartGame(playerCount)}>
+          <button className="btn btn-primary btn-large" onClick={() => onStartGame(playerCount, funMode)}>
             🎮 单机游戏
           </button>
           <button className="btn btn-primary btn-large" onClick={onOnlineMode}>
