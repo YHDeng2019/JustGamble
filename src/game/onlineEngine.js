@@ -5,6 +5,7 @@ import { localAIDecide } from '../ai/localPlayer';
 import { createDeck, shuffleDeck } from './deck';
 import { isPlayerOnline } from '../services/heartbeatService';
 import { estimateHandStrength } from './handEval';
+import { executeItem, getRefreshCost, dealItemsToPlayers } from './itemSystem';
 
 /**
  * 联机游戏引擎适配器
@@ -69,12 +70,26 @@ export class OnlineGameEngine {
     // 获取初始游戏状态
     const gameState = this.engine.getGameState();
 
+    // 娱乐模式：发道具
+    const funMode = room.settings?.funMode || false;
+    let playerItems = {};
+    if (funMode) {
+      const humanIds = players.map(p => p.id);
+      playerItems = dealItemsToPlayers(humanIds);
+      // 计算首次刷新费用
+      Object.values(playerItems).forEach(item => {
+        item.refreshCost = getRefreshCost(0, this.engine.bigBlind);
+      });
+    }
+
     // 将状态推送到 Firebase
     await set(ref(db, `rooms/${this.roomId}/gameState`), {
       ...gameState,
       deckSeed: seed,
       lastUpdate: Date.now(),
-      sequence: 1  // 初始序列号
+      sequence: 1,  // 初始序列号
+      funMode,
+      playerItems: funMode ? playerItems : null
     });
 
     console.log('[联机引擎] 游戏已初始化，玩家手牌已发放');
@@ -192,6 +207,17 @@ export class OnlineGameEngine {
 
       console.log('[联机引擎] 收到玩家动作:', action);
 
+      // 道具相关动作（不需要验证当前回合）
+      if (action.action === 'use_item' || action.action === 'refresh_item') {
+        try {
+          await this._handleItemAction(action, snapshot.ref);
+        } catch (err) {
+          console.error('[联机引擎] 处理道具动作失败:', err);
+          await remove(snapshot.ref);
+        }
+        return;
+      }
+
       // 验证是否是当前玩家的回合
       const state = this.engine.getGameState();
       const currentPlayer = state.players[state.currentPlayerIndex];
@@ -209,6 +235,8 @@ export class OnlineGameEngine {
             ...newState,
             lastUpdate: Date.now(),
             sequence: nextSequence,
+            funMode: this._funMode || false,
+            playerItems: this._playerItems || null,
             lastAction: {
               userId: action.userId,
               action: action.action,
@@ -235,6 +263,113 @@ export class OnlineGameEngine {
   }
 
   /**
+   * 处理道具动作（仅房主）
+   */
+  async _handleItemAction(action, actionRef) {
+    const db = getFirebaseDB();
+    const { userId, itemId, targetId } = action;
+
+    if (!this._funMode || !this._playerItems) {
+      await remove(actionRef);
+      return;
+    }
+
+    const playerItem = this._playerItems[userId];
+    if (!playerItem) {
+      await remove(actionRef);
+      return;
+    }
+
+    if (action.action === 'use_item') {
+      if (playerItem.used || playerItem.item !== itemId) {
+        await remove(actionRef);
+        return;
+      }
+
+      const result = executeItem(this.engine, itemId, userId, targetId);
+      if (!result.success) {
+        console.warn('[联机引擎] 道具使用失败:', result.error);
+        await remove(actionRef);
+        return;
+      }
+
+      // 标记已使用
+      this._playerItems[userId] = { ...playerItem, used: true, item: null };
+
+      const newState = this.engine.getGameState();
+      const nextSequence = (this.lastProcessedSequence || 0) + 1;
+      this.lastProcessedSequence = nextSequence;
+
+      // 私有效果（peek_next、peek_opponent）只通过 privateEffects 传给特定玩家
+      // 通过在 gameState 里加 privateEffects 节点，客户端自己过滤
+      const effectData = result.effectData || {};
+      const broadcastEffect = effectData.privateToUser
+        ? null
+        : effectData;
+
+      await update(ref(db, `rooms/${this.roomId}/gameState`), {
+        ...newState,
+        lastUpdate: Date.now(),
+        sequence: nextSequence,
+        funMode: true,
+        playerItems: this._playerItems,
+        ...(broadcastEffect ? { lastItemEffect: broadcastEffect } : {}),
+      });
+
+      // 私有效果：单独写一个只给该玩家的节点
+      if (effectData.privateToUser) {
+        await set(ref(db, `rooms/${this.roomId}/privateEffects/${userId}`), {
+          ...effectData,
+          timestamp: Date.now()
+        });
+      }
+
+      console.log('[联机引擎] 道具已使用:', itemId, 'by', userId);
+
+    } else if (action.action === 'refresh_item') {
+      const refreshCount = playerItem.refreshCount || 0;
+      const cost = getRefreshCost(refreshCount, this.engine.bigBlind);
+
+      const player = this.engine.players.find(p => p.id === userId);
+      if (!player || player.chips < cost) {
+        await remove(actionRef);
+        return;
+      }
+
+      // 扣筹码
+      player.chips -= cost;
+      this.engine.potManager.mainPot += cost;
+
+      const newCount = refreshCount + 1;
+      const newItem = drawRandomItem();
+      const nextRefreshCost = getRefreshCost(newCount, this.engine.bigBlind);
+
+      this._playerItems[userId] = {
+        item: newItem,
+        used: false,
+        refreshCount: newCount,
+        refreshCost: nextRefreshCost
+      };
+
+      const newState = this.engine.getGameState();
+      const nextSequence = (this.lastProcessedSequence || 0) + 1;
+      this.lastProcessedSequence = nextSequence;
+
+      await update(ref(db, `rooms/${this.roomId}/gameState`), {
+        ...newState,
+        lastUpdate: Date.now(),
+        sequence: nextSequence,
+        funMode: true,
+        playerItems: this._playerItems
+      });
+
+      console.log('[联机引擎] 道具已刷新:', newItem, 'cost:', cost, 'for', userId);
+    }
+
+    await remove(actionRef);
+  }
+
+  /**
    * 应用服务器状态到本地引擎
    */
   applyServerState(serverState) {
@@ -244,6 +379,10 @@ export class OnlineGameEngine {
     this._gameOver = serverState.gameOver || false;
     this._gameOverWinnerId = serverState.gameOverWinnerId || null;
     this._gameOverWinnerName = serverState.gameOverWinnerName || '';
+
+    // 娱乐模式状态
+    this._funMode = serverState.funMode || false;
+    this._playerItems = serverState.playerItems || null;
 
     // 更新引擎核心状态
     this.engine.stage = serverState.stage;
@@ -349,7 +488,9 @@ export class OnlineGameEngine {
       players: visiblePlayers,
       gameOver: this._gameOver || false,
       gameOverWinnerId: this._gameOverWinnerId || null,
-      gameOverWinnerName: this._gameOverWinnerName || ''
+      gameOverWinnerName: this._gameOverWinnerName || '',
+      funMode: this._funMode || false,
+      playerItems: this._playerItems || null
     };
   }
 
@@ -375,6 +516,8 @@ export class OnlineGameEngine {
         ...newState,
         lastUpdate: Date.now(),
         sequence: nextSequence,
+        funMode: this._funMode || false,
+        playerItems: this._playerItems || null,
         lastAction: {
           userId: this.userId,
           action,
@@ -393,6 +536,43 @@ export class OnlineGameEngine {
     }
 
     console.log(`[联机引擎] ${this.userId} 执行动作: ${action} ${amount}`);
+  }
+
+  /**
+   * 使用道具（推送到 Firebase）
+   */
+  async useItem(itemId, targetId = null) {
+    const db = getFirebaseDB();
+    if (this.isHost) {
+      // 房主直接调用 _handleItemAction
+      const fakeAction = { action: 'use_item', userId: this.userId, itemId, targetId };
+      await this._handleItemAction(fakeAction, null);
+    } else {
+      await push(ref(db, `rooms/${this.roomId}/actions`), {
+        userId: this.userId,
+        action: 'use_item',
+        itemId,
+        targetId,
+        timestamp: Date.now()
+      });
+    }
+  }
+
+  /**
+   * 刷新道具（推送到 Firebase）
+   */
+  async refreshItem() {
+    const db = getFirebaseDB();
+    if (this.isHost) {
+      const fakeAction = { action: 'refresh_item', userId: this.userId };
+      await this._handleItemAction(fakeAction, null);
+    } else {
+      await push(ref(db, `rooms/${this.roomId}/actions`), {
+        userId: this.userId,
+        action: 'refresh_item',
+        timestamp: Date.now()
+      });
+    }
   }
 
   /**
@@ -660,10 +840,23 @@ export class OnlineGameEngine {
             const newState = this.engine.getGameState();
             const nextSequence = (this.lastProcessedSequence || 0) + 1;
 
+            // 娱乐模式：为新一手分配道具
+            let newPlayerItems = null;
+            if (this._funMode) {
+              const playerIds = this.engine.players.map(p => p.id);
+              newPlayerItems = dealItemsToPlayers(playerIds);
+              Object.values(newPlayerItems).forEach(item => {
+                item.refreshCost = getRefreshCost(0, this.engine.bigBlind);
+              });
+              this._playerItems = newPlayerItems;
+            }
+
             await update(ref(db, `rooms/${this.roomId}/gameState`), {
               ...newState,
               lastUpdate: Date.now(),
-              sequence: nextSequence
+              sequence: nextSequence,
+              funMode: this._funMode || false,
+              playerItems: newPlayerItems
             });
 
             this.advancingNextHand = false; // 新一手已开始，释放锁

@@ -15,6 +15,7 @@ const OnlineLobby = ({ user, onRoomJoined, onBack }) => {
   const [initialChips, setInitialChips] = useState(1000);
   const [smallBlind, setSmallBlind] = useState(10);
   const [bigBlind, setBigBlind] = useState(20);
+  const [funMode, setFunMode] = useState(false);
 
   useEffect(() => {
     // 进入联机大厅时才初始化 Firebase
@@ -54,7 +55,8 @@ const OnlineLobby = ({ user, onRoomJoined, onBack }) => {
         maxPlayers,
         initialChips,
         smallBlind,
-        bigBlind
+        bigBlind,
+        funMode
       };
 
       const { roomId, roomCode: code } = await createRoom(user, settings);
@@ -165,6 +167,20 @@ const OnlineLobby = ({ user, onRoomJoined, onBack }) => {
                 onChange={(e) => setIsPublic(e.target.checked)}
               />
               公开房间（出现在大厅列表）
+            </label>
+          </div>
+
+          <div className="form-group fun-mode-group">
+            <label className="fun-mode-label">
+              <input
+                type="checkbox"
+                checked={funMode}
+                onChange={(e) => setFunMode(e.target.checked)}
+              />
+              <span className="fun-mode-text">
+                🎪 娱乐模式
+                <span className="fun-mode-hint">每局自动发道具，可用筹码刷新</span>
+              </span>
             </label>
           </div>
 

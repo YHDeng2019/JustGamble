@@ -664,3 +664,322 @@
 .stealth-mode .chat-send-btn:hover:not(:disabled) {
   background: #333;
 }
+
+/* ========== 娱乐模式道具卡 ========== */
+
+.item-card-widget {
+  position: fixed;
+  left: 16px;
+  bottom: 120px;
+  z-index: 500;
+  background: linear-gradient(135deg, rgba(30, 20, 60, 0.95), rgba(60, 30, 100, 0.95));
+  border: 1px solid rgba(180, 120, 255, 0.5);
+  border-radius: 12px;
+  padding: 10px 12px;
+  min-width: 200px;
+  max-width: 240px;
+  box-shadow: 0 4px 20px rgba(120, 60, 255, 0.35);
+  transition: opacity 0.3s;
+}
+
+.item-card-widget.item-used {
+  opacity: 0.45;
+  filter: grayscale(0.6);
+}
+
+.item-card-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.item-card-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.item-icon-img {
+  width: 32px;
+  height: 32px;
+  display: block;
+  filter: drop-shadow(0 0 4px rgba(200, 160, 255, 0.6));
+}
+
+.item-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.item-card-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #e0c0ff;
+}
+
+.item-card-desc {
+  font-size: 0.72rem;
+  color: rgba(220, 200, 255, 0.75);
+  line-height: 1.3;
+}
+
+.item-card-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.item-use-btn {
+  flex: 1;
+  padding: 5px 8px;
+  font-size: 0.8rem;
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.item-use-btn:hover {
+  background: linear-gradient(135deg, #6d28d9, #9333ea);
+}
+
+.item-refresh-btn {
+  flex: 1;
+  padding: 5px 8px;
+  font-size: 0.78rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: #ccc;
+  cursor: pointer;
+}
+
+.item-refresh-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
+/* 目标选择模态框 */
+.item-target-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 8000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.item-target-modal {
+  background: linear-gradient(135deg, #1e1040, #3c1e6e);
+  border: 1px solid rgba(180, 120, 255, 0.5);
+  border-radius: 16px;
+  padding: 24px;
+  min-width: 280px;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(120, 60, 255, 0.5);
+}
+
+.item-target-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #e0c0ff;
+  margin-bottom: 16px;
+}
+
+.item-target-players {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.item-target-player-btn {
+  padding: 10px 16px;
+  background: rgba(140, 70, 255, 0.25);
+  border: 1px solid rgba(180, 120, 255, 0.4);
+  border-radius: 8px;
+  color: #e0c0ff;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.item-target-player-btn:hover {
+  background: rgba(140, 70, 255, 0.5);
+}
+
+.item-target-cancel {
+  padding: 6px 20px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: #aaa;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.item-target-cancel:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* peek 类道具私有提示 */
+.item-peek-toast {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9000;
+  background: rgba(20, 10, 50, 0.96);
+  border: 2px solid rgba(180, 120, 255, 0.7);
+  border-radius: 12px;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1rem;
+  box-shadow: 0 6px 24px rgba(120, 60, 255, 0.5);
+  animation: fadeInDown 0.3s ease;
+}
+
+.peek-label {
+  color: #c4a0ff;
+  font-weight: 600;
+}
+
+.peek-card {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #1a1a2e;
+  background: #fff;
+  border-radius: 6px;
+  padding: 2px 8px;
+}
+
+.peek-card.red {
+  color: #e74c3c;
+}
+
+/* force_show 全桌广播 */
+.item-force-show-toast {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9000;
+  background: rgba(50, 10, 10, 0.96);
+  border: 2px solid rgba(255, 80, 80, 0.7);
+  border-radius: 12px;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1rem;
+  box-shadow: 0 6px 24px rgba(255, 60, 60, 0.4);
+  animation: fadeInDown 0.3s ease;
+}
+
+.force-show-icon {
+  font-size: 1.4rem;
+}
+
+.force-show-text {
+  color: #ffaaaa;
+  font-weight: 600;
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* 娱乐模式创建房间开关 */
+.fun-mode-group {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: rgba(120, 60, 255, 0.12);
+  border: 1px solid rgba(180, 120, 255, 0.3);
+  border-radius: 8px;
+}
+
+.fun-mode-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.fun-mode-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fun-mode-hint {
+  font-size: 0.75rem;
+  color: rgba(200, 170, 255, 0.75);
+}
+
+/* stealth 模式覆盖 */
+.stealth-mode .item-card-widget {
+  background: #fff;
+  border: 1px solid #ccc;
+  box-shadow: none;
+}
+
+.stealth-mode .item-card-name,
+.stealth-mode .item-card-desc {
+  color: #333;
+}
+
+.stealth-mode .item-use-btn {
+  background: #000;
+  color: #fff;
+}
+
+.stealth-mode .item-refresh-btn {
+  background: #f5f5f5;
+  border-color: #ccc;
+  color: #333;
+}
+
+.stealth-mode .item-target-modal,
+.stealth-mode .item-peek-toast,
+.stealth-mode .item-force-show-toast {
+  background: #fff;
+  border-color: #999;
+  color: #000;
+  box-shadow: none;
+}
+
+.stealth-mode .peek-label,
+.stealth-mode .item-target-title,
+.stealth-mode .force-show-text {
+  color: #000;
+}
+
+@media (max-width: 768px) {
+  .item-card-widget {
+    bottom: 100px;
+    left: 8px;
+    min-width: 170px;
+    max-width: 200px;
+    padding: 8px 10px;
+  }
+
+  .item-card-icon {
+    font-size: 1.3rem;
+  }
+
+  .item-card-name {
+    font-size: 0.82rem;
+  }
+
+  .item-card-desc {
+    font-size: 0.68rem;
+  }
+}

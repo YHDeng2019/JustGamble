@@ -23,7 +23,15 @@ const AUDIO_SRC = {
   gg: '/audio/GG.mp3',
   nice: '/audio/nice.mp3',
   think: '/audio/think.mp3',
-  damn: '/audio/damn.mp3'
+  damn: '/audio/damn.mp3',
+  // 道具音效（Kenney casino pack, CC0）
+  item_swap: '/audio/items/card-shuffle.ogg',       // 换牌协议
+  item_peek: '/audio/items/card-slide-1.ogg',       // 天眼/读心术
+  item_replace_hand: '/audio/items/dice-shake-1.ogg',  // 手气不错
+  item_replace_community: '/audio/items/card-shove-1.ogg', // 天意弄人
+  item_shield: '/audio/items/chips-handle-1.ogg',   // 免死金牌
+  item_force_show: '/audio/items/card-fan-1.ogg',   // 摊底
+  item_refresh: '/audio/items/card-slide-1.ogg'     // 刷新道具
 };
 
 // 各 BGM 目标音量（游戏内压低，让牌桌音效穿透）
@@ -248,6 +256,14 @@ export const sfx = {
   },
   click: () => tone(600, 0.04, 'square', 0.05),            // 按钮点击
   yourturn: () => playSample('yourturn', AUDIO_SRC.yourturn, 0.7),  // 轮到你了：使用真实音频
+  // 道具音效
+  item_swap: () => playSample('item_swap', AUDIO_SRC.item_swap, 0.65),
+  item_peek: () => playSample('item_peek', AUDIO_SRC.item_peek, 0.6),
+  item_replace_hand: () => playSample('item_replace_hand', AUDIO_SRC.item_replace_hand, 0.55),
+  item_replace_community: () => playSample('item_replace_community', AUDIO_SRC.item_replace_community, 0.65),
+  item_shield: () => playSample('item_shield', AUDIO_SRC.item_shield, 0.6),
+  item_force_show: () => playSample('item_force_show', AUDIO_SRC.item_force_show, 0.65),
+  item_refresh: () => playSample('item_refresh', AUDIO_SRC.item_refresh, 0.5),
   // 表情音效
   ewww: () => playSample('ewww', AUDIO_SRC.ewww, 0.7),
   laugh: () => playSample('laugh', AUDIO_SRC.laugh, 0.7),

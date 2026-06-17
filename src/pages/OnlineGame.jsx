@@ -11,6 +11,7 @@ import { describeCurrentHand } from '../game/handEval';
 import { GAME_STAGES } from '../game/engine';
 import { addGameHistory } from '../auth/userManager';
 import { v4 as uuidv4 } from 'uuid';
+import { ITEMS } from '../game/itemSystem';
 import Table from '../ui/Table';
 import ActionBar from '../ui/ActionBar';
 import GameLog from '../ui/GameLog';
@@ -55,6 +56,9 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
   const [isReady, setIsReady] = useState(false); // 当前玩家是否准备
   const [offlinePlayerIds, setOfflinePlayerIds] = useState([]); // 离线玩家ID列表
   const [gameOver, setGameOver] = useState(null); // 游戏结束信息 {winnerId, winnerName, isWinner}
+  const [itemTargetMode, setItemTargetMode] = useState(null); // 当前等待选择目标的道具 ID
+  const [peekEffect, setPeekEffect] = useState(null); // {card, targetName?, type} 私有效果弹窗
+  const [forceShowEffect, setForceShowEffect] = useState(null); // {card, targetName} 全桌摊牌
 
   const engineRef = useRef(null);
   const isHost = room?.hostId === user.userId;
@@ -408,6 +412,31 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
       clearInterval(interval);
     };
   }, [roomId]);
+
+  // 订阅私有效果（peek 类道具）
+  useEffect(() => {
+    if (!roomId || !user?.userId) return;
+    const db = getFirebaseDB();
+    const privateRef = ref(db, `rooms/${roomId}/privateEffects/${user.userId}`);
+    const listener = onValue(privateRef, (snap) => {
+      if (!snap.exists()) return;
+      const effect = snap.val();
+      if (!effect || !effect.card) return;
+      setPeekEffect(effect);
+      setTimeout(() => setPeekEffect(null), 4000);
+    });
+    return () => off(privateRef, 'value', listener);
+  }, [roomId, user?.userId]);
+
+  // 监听全桌道具效果（force_show / replace_community 等广播效果）
+  useEffect(() => {
+    if (!gameState?.lastItemEffect) return;
+    const effect = gameState.lastItemEffect;
+    if (effect.type === 'force_show') {
+      setForceShowEffect(effect);
+      setTimeout(() => setForceShowEffect(null), 3500);
+    }
+  }, [gameState?.lastItemEffect]);
 
   // 计算下拉菜单位置
   useEffect(() => {
@@ -875,6 +904,54 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
     }
   };
 
+  const handleUseItem = async (targetId = null) => {
+    if (!engineRef.current) return;
+    try {
+      const itemId = itemTargetMode || gameState?.playerItems?.[user.userId]?.item;
+      await engineRef.current.useItem(itemId, targetId);
+      // 播放对应道具音效
+      const soundMap = {
+        swap_hand: 'item_swap',
+        peek_next: 'item_peek',
+        peek_opponent: 'item_peek',
+        replace_hand: 'item_replace_hand',
+        replace_community: 'item_replace_community',
+        shield: 'item_shield',
+        force_show: 'item_force_show'
+      };
+      playSound(soundMap[itemId] || 'item_swap', !soundEnabled);
+      setItemTargetMode(null);
+    } catch (err) {
+      console.error('[联机游戏] 使用道具失败:', err);
+      setError('使用道具失败: ' + err.message);
+      setTimeout(() => setError(''), 3000);
+    }
+  };
+
+  const handleRefreshItem = async () => {
+    if (!engineRef.current) return;
+    try {
+      await engineRef.current.refreshItem();
+      playSound('item_refresh', !soundEnabled);
+    } catch (err) {
+      console.error('[联机游戏] 刷新道具失败:', err);
+      setError('刷新道具失败: ' + err.message);
+      setTimeout(() => setError(''), 3000);
+    }
+  };
+
+  const handleItemButtonClick = () => {
+    const myItem = gameState?.playerItems?.[user.userId];
+    if (!myItem || myItem.used || !myItem.item) return;
+    const itemDef = ITEMS[myItem.item];
+    if (!itemDef) return;
+    if (itemDef.needsTarget) {
+      setItemTargetMode(myItem.item);
+    } else {
+      handleUseItem(null);
+    }
+  };
+
   const handleReady = async () => {
     try {
       const db = getFirebaseDB();
@@ -1124,6 +1201,107 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
         allInFlash={allInFlash}
         chatBubbles={chatBubbles}
       />
+
+      {/* 娱乐模式道具卡 */}
+      {gameState.funMode && (() => {
+        const myItem = gameState.playerItems?.[user.userId];
+        if (!myItem) return null;
+        const itemDef = myItem.item ? ITEMS[myItem.item] : null;
+        const canUse = !myItem.used && !!itemDef && gameState.stage !== 'RESULT' && gameState.stage !== 'WAITING';
+        return (
+          <div className={`item-card-widget ${myItem.used ? 'item-used' : ''}`}>
+            <div className="item-card-info">
+              <span className="item-card-icon">
+                {itemDef
+                  ? <img src={itemDef.icon} alt={itemDef.name} className="item-icon-img" />
+                  : '—'}
+              </span>
+              <div className="item-card-text">
+                <span className="item-card-name">{itemDef ? itemDef.name : (myItem.used ? '已使用' : '无道具')}</span>
+                {itemDef && <span className="item-card-desc">{itemDef.desc}</span>}
+              </div>
+            </div>
+            <div className="item-card-actions">
+              {canUse && (
+                <button className="btn item-use-btn" onClick={handleItemButtonClick}>
+                  使用
+                </button>
+              )}
+              {!myItem.used && (
+                <button
+                  className="btn item-refresh-btn"
+                  onClick={handleRefreshItem}
+                  title={`花费 ${myItem.refreshCost} 筹码刷新道具`}
+                >
+                  刷新 {myItem.refreshCost}
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* 目标选择模式：选择要施加道具的对手 */}
+      {itemTargetMode && (
+        <div className="item-target-overlay" onClick={() => setItemTargetMode(null)}>
+          <div className="item-target-modal" onClick={e => e.stopPropagation()}>
+            <div className="item-target-title">
+              {ITEMS[itemTargetMode] && (
+                <img src={ITEMS[itemTargetMode].icon} alt={ITEMS[itemTargetMode].name} className="item-icon-img" style={{width:20,height:20,marginRight:6}} />
+              )}
+              {ITEMS[itemTargetMode]?.name} — 选择目标
+            </div>
+            <div className="item-target-players">
+              {gameState.players
+                .filter(p => p.id !== user.userId && !p.folded && !p.out)
+                .map(p => (
+                  <button
+                    key={p.id}
+                    className="btn item-target-player-btn"
+                    onClick={() => handleUseItem(p.id)}
+                  >
+                    {p.avatar} {p.name}
+                  </button>
+                ))}
+            </div>
+            <button className="btn item-target-cancel" onClick={() => setItemTargetMode(null)}>取消</button>
+          </div>
+        </div>
+      )}
+
+      {/* 私有效果弹窗（peek 类道具） */}
+      {peekEffect && (
+        <div className="item-peek-toast">
+          {peekEffect.type === 'peek_next' ? (
+            <>
+              <span className="peek-label">👁 下一张公共牌：</span>
+              <span className={`peek-card ${['♥','♦'].includes(peekEffect.card?.suit) ? 'red' : ''}`}>
+                {peekEffect.card?.value}{peekEffect.card?.suit}
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="peek-label">🔮 {peekEffect.targetName} 的手牌：</span>
+              <span className={`peek-card ${['♥','♦'].includes(peekEffect.card?.suit) ? 'red' : ''}`}>
+                {peekEffect.card?.value}{peekEffect.card?.suit}
+              </span>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* 全桌摊牌效果（force_show） */}
+      {forceShowEffect && (
+        <div className="item-force-show-toast">
+          <span className="force-show-icon">🃏</span>
+          <span className="force-show-text">
+            {forceShowEffect.targetName} 被迫亮出：
+          </span>
+          <span className={`peek-card ${['♥','♦'].includes(forceShowEffect.card?.suit) ? 'red' : ''}`}>
+            {forceShowEffect.card?.value}{forceShowEffect.card?.suit}
+          </span>
+        </div>
+      )}
 
       {actionBarVisible && actionBarReady && dealingComplete && (
         <>
