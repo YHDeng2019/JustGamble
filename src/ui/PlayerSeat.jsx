@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Card from './Card';
+import { ITEMS } from '../game/itemSystem';
 
-const PlayerSeat = ({ player, isCurrent, isDealer, position, aiType, isThinking, isWinner, visibleCards, blindLabel, chatBubble }) => {
+const PlayerSeat = ({ player, isCurrent, isDealer, position, aiType, isThinking, isWinner, visibleCards, blindLabel, chatBubble, itemState, isMyItem }) => {
   const [actionToast, setActionToast] = useState(null);
   const [prevBet, setPrevBet] = useState(player.bet);
   const [prevFolded, setPrevFolded] = useState(player.folded);
@@ -90,6 +91,16 @@ const PlayerSeat = ({ player, isCurrent, isDealer, position, aiType, isThinking,
           <div className={`ai-type-badge ai-${aiType}`}>
             {aiType === 'llm' ? '🧠' : '💻'}
           </div>
+        )}
+
+        {/* 道具徽章 */}
+        {isMyItem && itemState && itemState.item && (
+          <div className={`item-badge${itemState.used ? ' item-badge-used' : ''}`} title={ITEMS[itemState.item]?.name}>
+            <img src={ITEMS[itemState.item]?.icon} className="item-badge-icon" alt="" />
+          </div>
+        )}
+        {!isMyItem && itemState && itemState.item && !itemState.used && (
+          <div className="item-badge item-badge-hidden" title="对手有道具">🎁</div>
         )}
 
         <div className="player-chips">{player.chips}</div>

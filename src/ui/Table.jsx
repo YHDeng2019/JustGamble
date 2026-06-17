@@ -21,7 +21,7 @@ const STAGE_NAMES = {
   RIVER: '河牌'
 };
 
-const Table = ({ gameState, aiStatus, userSettings, thinkingAi, totalPlayers, winnerHighlight, dealingCards, stealthMode, chatBubbles = {} }) => {
+const Table = ({ gameState, aiStatus, userSettings, thinkingAi, totalPlayers, winnerHighlight, dealingCards, stealthMode, chatBubbles = {}, playerItems = {} }) => {
   const { players, communityCards, pot, currentPlayerIndex, dealerIndex, stage } = gameState;
   const [stageAnnounce, setStageAnnounce] = useState(null);
   const [potBounce, setPotBounce] = useState(false);
@@ -171,6 +171,8 @@ const Table = ({ gameState, aiStatus, userSettings, thinkingAi, totalPlayers, wi
             visibleCards={visibleCards}
             blindLabel={originalIndex === sbIndex ? 'SB' : originalIndex === bbIndex ? 'BB' : null}
             chatBubble={chatBubbles[player.id]?.text}
+            itemState={playerItems[player.id] || null}
+            isMyItem={player.id === (userSettings?.userId || 'human') || player.isHuman}
           />
         );
       })}

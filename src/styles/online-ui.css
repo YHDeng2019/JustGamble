@@ -983,3 +983,260 @@
     font-size: 0.68rem;
   }
 }
+
+/* ========== 娱乐模式商店弹窗 ========== */
+
+.shop-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 8500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease;
+}
+
+.shop-modal {
+  background: linear-gradient(160deg, #12082a 0%, #1e0f40 60%, #2a1060 100%);
+  border: 2px solid rgba(180, 120, 255, 0.6);
+  border-radius: 20px;
+  padding: 28px 32px;
+  width: min(520px, 92vw);
+  box-shadow: 0 16px 48px rgba(100, 40, 255, 0.5);
+  animation: shopModalIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes shopModalIn {
+  from { opacity: 0; transform: scale(0.85) translateY(20px); }
+  to   { opacity: 1; transform: scale(1)   translateY(0); }
+}
+
+.shop-modal-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.shop-modal-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #e0c0ff;
+  margin-bottom: 6px;
+}
+
+.shop-modal-subtitle {
+  font-size: 0.85rem;
+  color: rgba(200, 170, 255, 0.7);
+}
+
+.shop-countdown-ring {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(120, 60, 255, 0.3);
+  border: 2px solid rgba(180, 120, 255, 0.6);
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #e0c0ff;
+  margin: 0 auto 12px;
+  transition: background 0.5s;
+}
+
+.shop-countdown-ring.urgent {
+  background: rgba(255, 60, 60, 0.3);
+  border-color: rgba(255, 100, 100, 0.6);
+  color: #ffaaaa;
+  animation: urgentPulse 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes urgentPulse {
+  from { transform: scale(1); }
+  to   { transform: scale(1.08); }
+}
+
+.shop-items-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 18px;
+  justify-content: center;
+}
+
+.shop-item-card {
+  flex: 1;
+  max-width: 150px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1.5px solid rgba(180, 120, 255, 0.3);
+  border-radius: 12px;
+  padding: 14px 10px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.shop-item-card:hover {
+  background: rgba(120, 60, 255, 0.2);
+  border-color: rgba(180, 120, 255, 0.7);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(120, 60, 255, 0.3);
+}
+
+.shop-item-card.selected {
+  background: rgba(120, 60, 255, 0.35);
+  border-color: rgba(200, 140, 255, 0.9);
+  box-shadow: 0 0 16px rgba(160, 80, 255, 0.5);
+}
+
+.shop-item-card.cant-afford {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.shop-item-card-icon {
+  width: 40px;
+  height: 40px;
+  filter: drop-shadow(0 0 6px rgba(200, 160, 255, 0.7));
+}
+
+.shop-item-card-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #e0c0ff;
+  text-align: center;
+}
+
+.shop-item-card-desc {
+  font-size: 0.7rem;
+  color: rgba(210, 190, 255, 0.65);
+  text-align: center;
+  line-height: 1.35;
+}
+
+.shop-item-card-cost {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #ffd700;
+  background: rgba(255, 215, 0, 0.12);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 10px;
+  padding: 2px 8px;
+}
+
+.shop-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.shop-buy-btn {
+  padding: 10px 28px;
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.shop-buy-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #6d28d9, #9333ea);
+  transform: translateY(-1px);
+}
+
+.shop-buy-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.shop-skip-btn {
+  padding: 10px 24px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  color: #aaa;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.shop-skip-btn:hover {
+  background: rgba(255, 255, 255, 0.13);
+  color: #fff;
+}
+
+/* stealth 覆盖 */
+.stealth-mode .shop-modal-overlay { background: rgba(255,255,255,0.7); }
+.stealth-mode .shop-modal { background: #fff; border-color: #999; box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+.stealth-mode .shop-modal-title, .stealth-mode .shop-item-card-name { color: #000; }
+.stealth-mode .shop-modal-subtitle, .stealth-mode .shop-item-card-desc { color: #666; }
+.stealth-mode .shop-item-card { background: #f5f5f5; border-color: #ccc; }
+.stealth-mode .shop-item-card.selected { background: #e0e0e0; border-color: #000; }
+.stealth-mode .shop-countdown-ring { background: #eee; border-color: #000; color: #000; }
+.stealth-mode .shop-item-card-cost { color: #333; background: #f0f0f0; border-color: #ccc; }
+.stealth-mode .shop-buy-btn { background: #000; }
+.stealth-mode .shop-skip-btn { background: #f5f5f5; border-color: #ccc; color: #333; }
+
+/* ========== 道具小图标徽章（头像旁） ========== */
+
+.item-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(110, 40, 220, 0.9);
+  border: 1.5px solid rgba(200, 150, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+  box-shadow: 0 0 6px rgba(140, 60, 255, 0.5);
+}
+
+.item-badge-icon {
+  width: 13px;
+  height: 13px;
+  display: block;
+}
+
+.item-badge-used {
+  opacity: 0.35;
+  filter: grayscale(0.8);
+  box-shadow: none;
+}
+
+.item-badge-hidden {
+  font-size: 11px;
+  background: rgba(60, 40, 100, 0.75);
+  border-color: rgba(150, 100, 220, 0.5);
+}
+
+/* stealth 覆盖 */
+.stealth-mode .item-badge {
+  background: #000;
+  border-color: #555;
+  box-shadow: none;
+}
+.stealth-mode .item-badge-hidden {
+  background: #333;
+  border-color: #777;
+}
+
+@media (max-width: 768px) {
+  .shop-modal { padding: 20px 16px; }
+  .shop-items-row { gap: 8px; }
+  .shop-item-card { padding: 10px 8px; max-width: 110px; }
+  .shop-item-card-icon { width: 32px; height: 32px; }
+  .shop-item-card-name { font-size: 0.78rem; }
+  .shop-item-card-desc { font-size: 0.65rem; }
+}

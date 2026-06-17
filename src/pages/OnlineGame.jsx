@@ -11,7 +11,7 @@ import { describeCurrentHand } from '../game/handEval';
 import { GAME_STAGES } from '../game/engine';
 import { addGameHistory } from '../auth/userManager';
 import { v4 as uuidv4 } from 'uuid';
-import { ITEMS } from '../game/itemSystem';
+import { ITEMS, ITEM_COSTS } from '../game/itemSystem';
 import Table from '../ui/Table';
 import ActionBar from '../ui/ActionBar';
 import GameLog from '../ui/GameLog';
@@ -59,6 +59,11 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
   const [itemTargetMode, setItemTargetMode] = useState(null); // 当前等待选择目标的道具 ID
   const [peekEffect, setPeekEffect] = useState(null); // {card, targetName?, type} 私有效果弹窗
   const [forceShowEffect, setForceShowEffect] = useState(null); // {card, targetName} 全桌摊牌
+  // 商店阶段
+  const [shopOffers, setShopOffers] = useState([]); // 当前玩家的3张道具报价
+  const [shopSelected, setShopSelected] = useState(null);
+  const [shopCountdown, setShopCountdown] = useState(10);
+  const shopIntervalRef = useRef(null);
 
   const engineRef = useRef(null);
   const isHost = room?.hostId === user.userId;
@@ -427,6 +432,40 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
     });
     return () => off(privateRef, 'value', listener);
   }, [roomId, user?.userId]);
+
+  // 订阅私有商店报价
+  useEffect(() => {
+    if (!roomId || !user?.userId) return;
+    const db = getFirebaseDB();
+    const offersRef = ref(db, `rooms/${roomId}/privateShopOffers/${user.userId}`);
+    const listener = onValue(offersRef, (snap) => {
+      if (!snap.exists()) return;
+      const offers = snap.val();
+      if (Array.isArray(offers) && offers.length > 0) {
+        setShopOffers(offers);
+        setShopSelected(null);
+      }
+    });
+    return () => off(offersRef, 'value', listener);
+  }, [roomId, user?.userId]);
+
+  // 商店倒计时：监听 shopPhase.active
+  useEffect(() => {
+    const shopPhase = gameState?.shopPhase;
+    if (shopPhase?.active && shopPhase?.startsAt) {
+      const elapsed = Date.now() - shopPhase.startsAt;
+      const remaining = Math.max(0, Math.ceil((shopPhase.durationMs - elapsed) / 1000));
+      setShopCountdown(remaining);
+      clearInterval(shopIntervalRef.current);
+      shopIntervalRef.current = setInterval(() => {
+        setShopCountdown(prev => Math.max(0, prev - 1));
+      }, 1000);
+    } else {
+      clearInterval(shopIntervalRef.current);
+      setShopOffers([]);
+    }
+    return () => clearInterval(shopIntervalRef.current);
+  }, [gameState?.shopPhase?.active]);
 
   // 监听全桌道具效果（force_show / replace_community 等广播效果）
   useEffect(() => {
@@ -1200,46 +1239,58 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
         stealthMode={stealthMode}
         allInFlash={allInFlash}
         chatBubbles={chatBubbles}
+        playerItems={gameState.playerItems || {}}
       />
 
-      {/* 娱乐模式道具卡 */}
-      {gameState.funMode && (() => {
-        const myItem = gameState.playerItems?.[user.userId];
-        if (!myItem) return null;
-        const itemDef = myItem.item ? ITEMS[myItem.item] : null;
-        const canUse = !myItem.used && !!itemDef && gameState.stage !== 'RESULT' && gameState.stage !== 'WAITING';
-        return (
-          <div className={`item-card-widget ${myItem.used ? 'item-used' : ''}`}>
-            <div className="item-card-info">
-              <span className="item-card-icon">
-                {itemDef
-                  ? <img src={itemDef.icon} alt={itemDef.name} className="item-icon-img" />
-                  : '—'}
-              </span>
-              <div className="item-card-text">
-                <span className="item-card-name">{itemDef ? itemDef.name : (myItem.used ? '已使用' : '无道具')}</span>
-                {itemDef && <span className="item-card-desc">{itemDef.desc}</span>}
-              </div>
+      {/* 娱乐模式：商店弹窗 */}
+      {gameState.funMode && gameState.shopPhase?.active && shopOffers.length > 0 && (
+        <div className="shop-modal-overlay">
+          <div className="shop-modal">
+            <div className="shop-modal-header">
+              <div className={`shop-countdown-ring${shopCountdown <= 3 ? ' urgent' : ''}`}>{shopCountdown}</div>
+              <div className="shop-modal-title">🎪 道具商店</div>
+              <div className="shop-modal-subtitle">选择一件道具（可跳过）</div>
             </div>
-            <div className="item-card-actions">
-              {canUse && (
-                <button className="btn item-use-btn" onClick={handleItemButtonClick}>
-                  使用
-                </button>
-              )}
-              {!myItem.used && (
-                <button
-                  className="btn item-refresh-btn"
-                  onClick={handleRefreshItem}
-                  title={`花费 ${myItem.refreshCost} 筹码刷新道具`}
-                >
-                  刷新 {myItem.refreshCost}
-                </button>
-              )}
+            <div className="shop-items-row">
+              {shopOffers.map(itemId => {
+                const def = ITEMS[itemId];
+                if (!def) return null;
+                const bigBlind = gameState.bigBlind || 20;
+                const cost = (ITEM_COSTS[itemId] || 5) * bigBlind;
+                const myChips = gameState.players?.find(p => p.id === user.userId)?.chips || 0;
+                const cantAfford = myChips < cost;
+                return (
+                  <div
+                    key={itemId}
+                    className={`shop-item-card${shopSelected === itemId ? ' selected' : ''}${cantAfford ? ' cant-afford' : ''}`}
+                    onClick={() => !cantAfford && setShopSelected(prev => prev === itemId ? null : itemId)}
+                  >
+                    <img src={def.icon} className="shop-item-card-icon" alt={def.name} />
+                    <span className="shop-item-card-name">{def.name}</span>
+                    <span className="shop-item-card-desc">{def.desc}</span>
+                    <span className="shop-item-card-cost">{cost} 筹码</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="shop-modal-actions">
+              <button
+                className="shop-buy-btn"
+                disabled={!shopSelected}
+                onClick={() => engineRef.current?.buyShopItem(shopSelected)}
+              >
+                购买
+              </button>
+              <button
+                className="shop-skip-btn"
+                onClick={() => engineRef.current?.buyShopItem(null)}
+              >
+                跳过
+              </button>
             </div>
           </div>
-        );
-      })()}
+        </div>
+      )}
 
       {/* 目标选择模式：选择要施加道具的对手 */}
       {itemTargetMode && (

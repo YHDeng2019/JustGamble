@@ -9,7 +9,7 @@ import { refreshSessionUser } from '../auth/session';
 import { addGameHistory } from '../auth/userManager';
 import { debugLog } from '../game/debugLog';
 import { playSound } from '../game/sound';
-import { ITEMS, drawRandomItem, getRefreshCost, executeItem, applyShieldSettlement, dealItemsToPlayers } from '../game/itemSystem';
+import { ITEMS, ITEM_COSTS, drawRandomItem, drawShopOffers, generateShopOffersForPlayers, getRefreshCost, executeItem, applyShieldSettlement, aiDecideShopPurchase } from '../game/itemSystem';
 import Table from '../ui/Table';
 import ActionBar from '../ui/ActionBar';
 import GameLog from '../ui/GameLog';
@@ -48,6 +48,14 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
   const [itemTargetMode, setItemTargetMode] = useState(null); // 需要目标时设为 itemId
   const [peekEffect, setPeekEffect] = useState(null); // { type, card, targetName? }
   const [forceShowEffect, setForceShowEffect] = useState(null); // { targetName, card }
+  // 商店阶段
+  const [showShopPhase, setShowShopPhase] = useState(false);
+  const [shopOffers, setShopOffers] = useState([]); // 给人类玩家展示的3张道具
+  const [shopSelected, setShopSelected] = useState(null); // 选中的 itemId
+  const [shopCountdown, setShopCountdown] = useState(10);
+  const shopCountdownRef = React.useRef(null);
+  const shopIntervalRef = React.useRef(null);
+  const pendingGameRef = React.useRef(null); // 商店结束后要继续的游戏&设置
   const countdownRef = React.useRef(null);
   const gameRef = React.useRef(null); // 始终指向当前引擎实例，避免 state 闭包陷阱
   const wasHumanTurnRef = React.useRef(false); // 追踪上一次是否人类回合
@@ -153,7 +161,7 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
 
     setTimeout(() => {
       newGame.dealInitialCards();
-      dealItemsForHand(newGame);
+      setPlayerItems({}); // 每局开始清空道具
       setGameState(newGame.getGameState());
       // 发牌动画：逐张显示
       animateDealing(newGame, currentUser.settings);
@@ -184,23 +192,96 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
           const extraDelay = isHumanFirst ? 2000 : 0;
 
           setTimeout(() => {
-            processTurn(currentGame, userSettings);
+            if (funMode) {
+              openShopPhase(currentGame, userSettings);
+            } else {
+              processTurn(currentGame, userSettings);
+            }
           }, extraDelay);
         }, 400);
       }
     }, 150); // 从 200ms 改为 150ms，让发牌更流畅
   };
 
-  // 娱乐模式：为所有玩家发道具
-  const dealItemsForHand = (currentGame) => {
-    if (!funMode) return;
+  // 娱乐模式：打开商店阶段（发牌动画完成后调用）
+  const openShopPhase = (currentGame, userSettings) => {
     const bigBlind = currentGame.getGameState().bigBlind || 20;
-    const ids = currentGame.players.map(p => p.id);
-    const items = dealItemsToPlayers(ids);
-    Object.keys(items).forEach(id => {
-      items[id].refreshCost = getRefreshCost(0, bigBlind);
+    const allOffers = generateShopOffersForPlayers(currentGame.players.map(p => p.id));
+    const humanOffers = allOffers['human'] || allOffers[currentGame.players.find(p => p.isHuman)?.id] || [];
+
+    pendingGameRef.current = { game: currentGame, settings: userSettings };
+    setShopOffers(humanOffers);
+    setShopSelected(null);
+    setShopCountdown(10);
+    setShowShopPhase(true);
+
+    // 倒计时
+    shopIntervalRef.current = setInterval(() => {
+      setShopCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(shopIntervalRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    // 10s 强制关闭
+    shopCountdownRef.current = setTimeout(() => {
+      closeShopPhase(null, currentGame, userSettings);
+    }, 10000);
+
+    // AI 自动决策（2~5s 随机延迟）
+    currentGame.players.filter(p => !p.isHuman).forEach(aiPlayer => {
+      const thinkMs = 2000 + Math.random() * 3000;
+      setTimeout(() => {
+        const chosenItem = aiDecideShopPurchase(aiPlayer, allOffers[aiPlayer.id] || [], bigBlind);
+        if (chosenItem) {
+          const cost = (ITEM_COSTS[chosenItem] || 5) * bigBlind;
+          if (aiPlayer.chips >= cost) {
+            aiPlayer.chips -= cost;
+            setPlayerItems(prev => ({
+              ...prev,
+              [aiPlayer.id]: { item: chosenItem, used: false, refreshCount: 0, refreshCost: getRefreshCost(0, bigBlind) }
+            }));
+          }
+        }
+      }, thinkMs);
     });
-    setPlayerItems(items);
+  };
+
+  // 娱乐模式：关闭商店并开始游戏
+  const closeShopPhase = (humanChoice, currentGame, userSettings) => {
+    clearTimeout(shopCountdownRef.current);
+    clearInterval(shopIntervalRef.current);
+    shopCountdownRef.current = null;
+    shopIntervalRef.current = null;
+
+    const game = currentGame || pendingGameRef.current?.game;
+    const settings = userSettings || pendingGameRef.current?.settings;
+    pendingGameRef.current = null;
+
+    setShowShopPhase(false);
+    setShopSelected(null);
+
+    if (humanChoice && game) {
+      const bigBlind = game.getGameState().bigBlind || 20;
+      const humanPlayer = game.players.find(p => p.isHuman);
+      if (humanPlayer) {
+        const cost = (ITEM_COSTS[humanChoice] || 5) * bigBlind;
+        if (humanPlayer.chips >= cost) {
+          humanPlayer.chips -= cost;
+          setPlayerItems(prev => ({
+            ...prev,
+            [humanPlayer.id]: { item: humanChoice, used: false, refreshCount: 0, refreshCost: getRefreshCost(0, bigBlind) }
+          }));
+        }
+      }
+    }
+
+    if (game && settings) {
+      processTurn(game, settings);
+    }
   };
 
   // 娱乐模式：使用道具（执行效果）
@@ -720,7 +801,7 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
     currentGame.startNewHand();
     setTimeout(() => {
       currentGame.dealInitialCards();
-      dealItemsForHand(currentGame);
+      setPlayerItems({});
       setGameState(currentGame.getGameState());
       animateDealing(currentGame, currentUser.settings);
     }, 600);
@@ -744,7 +825,7 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
     currentGame.startNewHand();
     setTimeout(() => {
       currentGame.dealInitialCards();
-      dealItemsForHand(currentGame);
+      setPlayerItems({});
       setGameState(currentGame.getGameState());
       animateDealing(currentGame, currentUser.settings);
     }, 500);
@@ -917,6 +998,7 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
         winnerHighlight={winnerHighlight}
         dealingCards={dealingCards}
         stealthMode={stealthMode}
+        playerItems={playerItems}
       />
 
       {getValidActions().length > 0 && !roundToast && dealingComplete && actionBarReady && (
@@ -940,47 +1022,63 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
         </>
       )}
 
-      {/* 娱乐模式道具卡 */}
-      {funMode && (() => {
-        const humanPlayer = gameRef.current?.players.find(p => p.isHuman);
-        if (!humanPlayer) return null;
-        const itemState = playerItems[humanPlayer.id];
-        if (!itemState || !itemState.item) return null;
-        const itemDef = ITEMS[itemState.item];
-        if (!itemDef) return null;
-        const bigBlind = gameState?.bigBlind || 20;
-        const refreshCost = getRefreshCost(itemState.refreshCount, bigBlind);
-        return (
-          <div className={`item-card-widget${itemState.used ? ' item-used' : ''}`}>
-            <div className="item-card-info">
-              <div className="item-card-icon">
-                <img src={itemDef.icon} className="item-icon-img" alt={itemDef.name} />
-              </div>
-              <div className="item-card-text">
-                <span className="item-card-name">{itemDef.name}</span>
-                <span className="item-card-desc">{itemDef.desc}</span>
-              </div>
+      {/* 娱乐模式：商店弹窗 */}
+      {showShopPhase && (
+        <div className="shop-modal-overlay">
+          <div className="shop-modal">
+            <div className="shop-modal-header">
+              <div className={`shop-countdown-ring${shopCountdown <= 3 ? ' urgent' : ''}`}>{shopCountdown}</div>
+              <div className="shop-modal-title">🎪 道具商店</div>
+              <div className="shop-modal-subtitle">选择一件道具（可跳过）</div>
             </div>
-            <div className="item-card-actions">
+            <div className="shop-items-row">
+              {shopOffers.map(itemId => {
+                const def = ITEMS[itemId];
+                if (!def) return null;
+                const bigBlind = gameRef.current?.getGameState().bigBlind || 20;
+                const cost = (ITEM_COSTS[itemId] || 5) * bigBlind;
+                const humanChips = gameRef.current?.players.find(p => p.isHuman)?.chips || 0;
+                const cantAfford = humanChips < cost;
+                return (
+                  <div
+                    key={itemId}
+                    className={`shop-item-card${shopSelected === itemId ? ' selected' : ''}${cantAfford ? ' cant-afford' : ''}`}
+                    onClick={() => !cantAfford && setShopSelected(prev => prev === itemId ? null : itemId)}
+                  >
+                    <img src={def.icon} className="shop-item-card-icon" alt={def.name} />
+                    <span className="shop-item-card-name">{def.name}</span>
+                    <span className="shop-item-card-desc">{def.desc}</span>
+                    <span className="shop-item-card-cost">{cost} 筹码</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="shop-modal-actions">
               <button
-                className="item-use-btn"
-                disabled={itemState.used}
-                onClick={handleItemButtonClick}
+                className="shop-buy-btn"
+                disabled={!shopSelected}
+                onClick={() => {
+                  const g = pendingGameRef.current?.game;
+                  const s = pendingGameRef.current?.settings;
+                  closeShopPhase(shopSelected, g, s);
+                }}
               >
-                {itemState.used ? '已使用' : '使用'}
+                购买
               </button>
               <button
-                className="item-refresh-btn"
-                disabled={humanPlayer.chips < refreshCost}
-                onClick={handleRefreshItem}
-                title={`刷新费用：${refreshCost} 筹码`}
+                className="shop-skip-btn"
+                onClick={() => {
+                  const g = pendingGameRef.current?.game;
+                  const s = pendingGameRef.current?.settings;
+                  closeShopPhase(null, g, s);
+                }}
               >
-                换({refreshCost})
+                跳过
               </button>
             </div>
           </div>
-        );
-      })()}
+        </div>
+      )}
 
       <GameLog
         logs={gameState.gameLog}

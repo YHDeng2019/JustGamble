@@ -5,7 +5,7 @@ import { localAIDecide } from '../ai/localPlayer';
 import { createDeck, shuffleDeck } from './deck';
 import { isPlayerOnline } from '../services/heartbeatService';
 import { estimateHandStrength } from './handEval';
-import { executeItem, getRefreshCost, dealItemsToPlayers } from './itemSystem';
+import { executeItem, getRefreshCost, dealItemsToPlayers, ITEM_COSTS, generateShopOffersForPlayers, aiDecideShopPurchase } from './itemSystem';
 
 /**
  * 联机游戏引擎适配器
@@ -70,17 +70,18 @@ export class OnlineGameEngine {
     // 获取初始游戏状态
     const gameState = this.engine.getGameState();
 
-    // 娱乐模式：发道具
+    // 娱乐模式：生成商店道具报价（每人3张）并写入私有节点
     const funMode = room.settings?.funMode || false;
-    let playerItems = {};
+    let shopOffers = {};
     if (funMode) {
-      const humanIds = players.map(p => p.id);
-      playerItems = dealItemsToPlayers(humanIds);
-      // 计算首次刷新费用
-      Object.values(playerItems).forEach(item => {
-        item.refreshCost = getRefreshCost(0, this.engine.bigBlind);
-      });
+      shopOffers = generateShopOffersForPlayers(players.map(p => p.id));
+      // 写入各玩家私有商店报价
+      for (const [uid, offers] of Object.entries(shopOffers)) {
+        await set(ref(db, `rooms/${this.roomId}/privateShopOffers/${uid}`), offers);
+      }
     }
+
+    const shopPhaseStart = funMode ? Date.now() : null;
 
     // 将状态推送到 Firebase
     await set(ref(db, `rooms/${this.roomId}/gameState`), {
@@ -89,7 +90,15 @@ export class OnlineGameEngine {
       lastUpdate: Date.now(),
       sequence: 1,  // 初始序列号
       funMode,
-      playerItems: funMode ? playerItems : null
+      playerItems: null,
+      ...(funMode ? {
+        shopPhase: {
+          active: true,
+          startsAt: shopPhaseStart,
+          durationMs: 10000,
+          purchases: {}
+        }
+      } : {})
     });
 
     console.log('[联机引擎] 游戏已初始化，玩家手牌已发放');
@@ -207,6 +216,17 @@ export class OnlineGameEngine {
 
       console.log('[联机引擎] 收到玩家动作:', action);
 
+      // 商店购买动作
+      if (action.action === 'shop_purchase') {
+        try {
+          await this._handleShopPurchase(action, snapshot.ref);
+        } catch (err) {
+          console.error('[联机引擎] 处理商店购买失败:', err);
+          await remove(snapshot.ref);
+        }
+        return;
+      }
+
       // 道具相关动作（不需要验证当前回合）
       if (action.action === 'use_item' || action.action === 'refresh_item') {
         try {
@@ -260,6 +280,108 @@ export class OnlineGameEngine {
     });
 
     this.listeners.push(() => off(actionsRef, 'child_added', listener));
+  }
+
+  /**
+   * 处理商店购买动作（仅房主，在 shopPhase 期间）
+   */
+  async _handleShopPurchase(action, actionRef) {
+    const db = getFirebaseDB();
+    const { userId, itemId } = action; // itemId === null 表示跳过
+
+    if (!this._funMode) {
+      if (actionRef) await remove(actionRef);
+      return;
+    }
+
+    // 记录购买决定
+    if (!this._shopPurchases) this._shopPurchases = {};
+    this._shopPurchases[userId] = itemId || null;
+
+    // 执行购买（扣筹码）
+    if (itemId) {
+      const player = this.engine.players.find(p => p.id === userId);
+      if (player) {
+        const cost = (ITEM_COSTS[itemId] || 5) * this.engine.bigBlind;
+        if (player.chips >= cost) {
+          player.chips -= cost;
+          if (!this._playerItems) this._playerItems = {};
+          this._playerItems[userId] = {
+            item: itemId,
+            used: false,
+            refreshCount: 0,
+            refreshCost: getRefreshCost(0, this.engine.bigBlind)
+          };
+        }
+      }
+    }
+
+    if (actionRef) await remove(actionRef);
+
+    // 检查是否所有玩家都完成了购买决定
+    const allPlayerIds = this.engine.players.map(p => p.id);
+    const allDecided = allPlayerIds.every(id => id in (this._shopPurchases || {}));
+
+    if (allDecided) {
+      await this._finalizeShopPhase();
+    } else {
+      // 推送最新 playerItems（以便客户端看到筹码变化）
+      const db2 = getFirebaseDB();
+      const nextSeq = (this.lastProcessedSequence || 0) + 1;
+      await update(ref(db2, `rooms/${this.roomId}/gameState`), {
+        playerItems: this._playerItems || null,
+        lastUpdate: Date.now(),
+        sequence: nextSeq
+      });
+    }
+  }
+
+  /**
+   * 结束商店阶段，开始游戏（仅房主）
+   */
+  async _finalizeShopPhase() {
+    const db = getFirebaseDB();
+    const nextSeq = (this.lastProcessedSequence || 0) + 1;
+
+    // AI 玩家自动购买（房主侧执行）
+    const bigBlind = this.engine.bigBlind;
+    for (const player of this.engine.players.filter(p => !p.isHuman)) {
+      if (this._shopPurchases && player.id in this._shopPurchases) continue;
+      // 获取该AI玩家的私有报价
+      const db2 = getFirebaseDB();
+      const snap = await get(ref(db2, `rooms/${this.roomId}/privateShopOffers/${player.id}`));
+      const offers = snap.exists() ? snap.val() : [];
+      const choice = aiDecideShopPurchase(player, offers, bigBlind);
+      if (choice) {
+        const cost = (ITEM_COSTS[choice] || 5) * bigBlind;
+        if (player.chips >= cost) {
+          player.chips -= cost;
+          if (!this._playerItems) this._playerItems = {};
+          this._playerItems[player.id] = {
+            item: choice, used: false, refreshCount: 0,
+            refreshCost: getRefreshCost(0, bigBlind)
+          };
+        }
+      }
+    }
+
+    // 清理商店数据
+    this._shopPurchases = {};
+    const gameState = this.engine.getGameState();
+
+    await update(ref(db, `rooms/${this.roomId}/gameState`), {
+      ...gameState,
+      lastUpdate: Date.now(),
+      sequence: nextSeq,
+      funMode: this._funMode || false,
+      playerItems: this._playerItems || null,
+      shopPhase: null  // 清除商店状态
+    });
+
+    // 清除私有报价节点
+    await remove(ref(db, `rooms/${this.roomId}/privateShopOffers`));
+
+    console.log('[联机引擎] 商店阶段结束，游戏开始');
   }
 
   /**
@@ -383,6 +505,7 @@ export class OnlineGameEngine {
     // 娱乐模式状态
     this._funMode = serverState.funMode || false;
     this._playerItems = serverState.playerItems || null;
+    this._shopPhase = serverState.shopPhase || null;
 
     // 更新引擎核心状态
     this.engine.stage = serverState.stage;
@@ -490,8 +613,27 @@ export class OnlineGameEngine {
       gameOverWinnerId: this._gameOverWinnerId || null,
       gameOverWinnerName: this._gameOverWinnerName || '',
       funMode: this._funMode || false,
-      playerItems: this._playerItems || null
+      playerItems: this._playerItems || null,
+      shopPhase: this._shopPhase || null
     };
+  }
+
+  /**
+   * 购买商店道具（客户端调用）
+   */
+  async buyShopItem(itemId) {
+    const db = getFirebaseDB();
+    if (this.isHost) {
+      // 房主直接处理自己的购买
+      await this._handleShopPurchase({ userId: this.userId, itemId: itemId || null, action: 'shop_purchase' }, null);
+    } else {
+      await push(ref(db, `rooms/${this.roomId}/actions`), {
+        action: 'shop_purchase',
+        userId: this.userId,
+        itemId: itemId || null,
+        timestamp: Date.now()
+      });
+    }
   }
 
   /**
@@ -840,24 +982,39 @@ export class OnlineGameEngine {
             const newState = this.engine.getGameState();
             const nextSequence = (this.lastProcessedSequence || 0) + 1;
 
-            // 娱乐模式：为新一手分配道具
-            let newPlayerItems = null;
-            if (this._funMode) {
-              const playerIds = this.engine.players.map(p => p.id);
-              newPlayerItems = dealItemsToPlayers(playerIds);
-              Object.values(newPlayerItems).forEach(item => {
-                item.refreshCost = getRefreshCost(0, this.engine.bigBlind);
-              });
-              this._playerItems = newPlayerItems;
+          // 娱乐模式：开启商店阶段
+          let newShopPhase = null;
+          if (this._funMode) {
+            const playerIds = this.engine.players.map(p => p.id);
+            const shopOffers = generateShopOffersForPlayers(playerIds);
+            for (const [uid, offers] of Object.entries(shopOffers)) {
+              await set(ref(db, `rooms/${this.roomId}/privateShopOffers/${uid}`), offers);
             }
+            this._shopPurchases = {};
+            this._playerItems = null;
+            newShopPhase = {
+              active: true,
+              startsAt: Date.now(),
+              durationMs: 10000,
+              purchases: {}
+            };
 
-            await update(ref(db, `rooms/${this.roomId}/gameState`), {
-              ...newState,
-              lastUpdate: Date.now(),
-              sequence: nextSequence,
-              funMode: this._funMode || false,
-              playerItems: newPlayerItems
-            });
+            // 10.5s 后强制结束商店阶段
+            setTimeout(() => {
+              if (this._shopPurchases !== null) {
+                this._finalizeShopPhase().catch(console.error);
+              }
+            }, 10500);
+          }
+
+          await update(ref(db, `rooms/${this.roomId}/gameState`), {
+            ...newState,
+            lastUpdate: Date.now(),
+            sequence: nextSequence,
+            funMode: this._funMode || false,
+            playerItems: null,
+            ...(newShopPhase ? { shopPhase: newShopPhase } : {})
+          });
 
             this.advancingNextHand = false; // 新一手已开始，释放锁
             console.log('[联机引擎] 新一手已开始');

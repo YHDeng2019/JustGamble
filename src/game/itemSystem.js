@@ -1,5 +1,16 @@
 import { dealCard } from './deck';
 
+// 道具购买费用（单位：BB倍数）
+export const ITEM_COSTS = {
+  replace_hand:      5,
+  peek_next:         5,
+  peek_opponent:     8,
+  swap_hand:         8,
+  replace_community: 10,
+  force_show:        10,
+  shield:            12,
+};
+
 export const ITEMS = {
   swap_hand: {
     id: 'swap_hand',
@@ -266,4 +277,65 @@ export function dealItemsToPlayers(playerIds) {
     };
   });
   return playerItems;
+}
+
+/**
+ * 抽取 count 张不重复的道具作为商店展示
+ */
+export function drawShopOffers(count = 3) {
+  const pool = [...ITEM_IDS];
+  const result = [];
+  while (result.length < count && pool.length > 0) {
+    const idx = Math.floor(Math.random() * pool.length);
+    result.push(pool.splice(idx, 1)[0]);
+  }
+  return result;
+}
+
+/**
+ * 为每位玩家生成各自的商店展示道具
+ */
+export function generateShopOffersForPlayers(playerIds, count = 3) {
+  const offers = {};
+  playerIds.forEach(id => {
+    offers[id] = drawShopOffers(count);
+  });
+  return offers;
+}
+
+/**
+ * AI 自动决策是否购买道具
+ * @returns itemId（购买）或 null（跳过）
+ */
+export function aiDecideShopPurchase(player, shopItems, bigBlind) {
+  const { style, chips } = player;
+  const initialChips = player.roundStartChips || chips;
+
+  const STYLE_CONFIG = {
+    conservative: { buyChance: 0.30, preferred: ['shield'] },
+    aggressive:   { buyChance: 0.70, preferred: ['swap_hand', 'force_show'] },
+    balanced:     { buyChance: 0.50, preferred: [] },
+    random:       { buyChance: 0.40, preferred: [] },
+    mathematical: { preferred: ['peek_next', 'peek_opponent'], chipThreshold: 1.2 },
+  };
+
+  const config = STYLE_CONFIG[style] || STYLE_CONFIG.balanced;
+
+  if (style === 'mathematical') {
+    if (chips < initialChips * (config.chipThreshold || 1.2)) return null;
+  } else {
+    if (Math.random() > (config.buyChance || 0.5)) return null;
+  }
+
+  // 过滤买得起的道具
+  const affordable = shopItems.filter(id => {
+    const cost = (ITEM_COSTS[id] || 5) * bigBlind;
+    return chips >= cost;
+  });
+  if (affordable.length === 0) return null;
+
+  const preferred = affordable.find(id => (config.preferred || []).includes(id));
+  if (preferred) return preferred;
+
+  return affordable[Math.floor(Math.random() * affordable.length)];
 }
