@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Card from './Card';
+import Avatar from './Avatar';
 import { ITEMS } from '../game/itemSystem';
 
 const PlayerSeat = ({ player, isCurrent, isDealer, position, aiType, isThinking, isWinner, visibleCards, blindLabel, chatBubble, itemState, isMyItem }) => {
@@ -84,7 +85,7 @@ const PlayerSeat = ({ player, isCurrent, isDealer, position, aiType, isThinking,
       )}
 
       <div className="player-info">
-        <div className="player-avatar">{player.avatar}</div>
+        <div className="player-avatar"><Avatar avatar={player.avatar} size="md" /></div>
         <div className="player-name">{player.name}</div>
 
         {!player.isHuman && aiType && (

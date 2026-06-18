@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { subscribeToRoom, leaveRoom, setPlayerReady, addBot, startGame, kickPlayer, setupDisconnectCleanup, cancelDisconnectCleanup, reconcileRoomHost } from '../services/roomService';
 import { startHeartbeat, stopHeartbeat } from '../services/heartbeatService';
 import { getPersonalities } from '../ai/personalities';
+import Avatar from '../ui/Avatar';
 
 const OnlineWaitingRoom = ({ roomId, user, onGameStart, onBack }) => {
   const [room, setRoom] = useState(null);
@@ -213,7 +214,7 @@ const OnlineWaitingRoom = ({ roomId, user, onGameStart, onBack }) => {
                 key={player.userId}
                 className={`player-card ${player.isReady ? 'ready' : ''} ${!player.isOnline ? 'offline' : ''}`}
               >
-                <div className="player-avatar">{player.avatar}</div>
+                <div className="player-avatar"><Avatar avatar={player.avatar} size="lg" /></div>
                 <div className="player-info">
                   <div className="player-name">
                     {player.displayName}

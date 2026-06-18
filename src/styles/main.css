@@ -176,7 +176,7 @@ body {
   opacity: 0.6;
 }
 
-.user-avatar-large { font-size: 2.5rem; }
+.user-avatar-large { font-size: 2.5rem; display: flex; align-items: center; justify-content: center; }
 .user-display-name {
   font-size: 1.1rem;
   font-weight: 700;
@@ -254,11 +254,19 @@ body {
   justify-content: center;
   font-size: 2rem;
   border: 2px solid var(--border-dim);
-  border-radius: 10px;
+  border-radius: 12px;
   cursor: pointer;
   transition: all var(--transition-normal);
   background: rgba(13, 17, 23, 0.6);
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.avatar-option .av-img {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 0 !important;
+  object-fit: cover;
 }
 
 .avatar-option:hover {

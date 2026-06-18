@@ -3,6 +3,7 @@ import { dealHands, evaluateHand, settle, aiDecideBet, HAND_NAMES, MULTIPLIERS, 
 import { getShuffledAIPlayers } from '../ai/personalities';
 import { refreshSessionUser } from '../auth/session';
 import { playSound } from '../game/sound';
+import Avatar from '../ui/Avatar';
 
 const BASE_BET = 50;
 const INIT_CHIPS = 2000;
@@ -65,7 +66,7 @@ const NiuSeat = ({ player, hand, revealed, result, chg, bet, isBanker }) => {
   return (
     <div className={seatClass}>
       <div className="niu2-seat-top">
-        <span className="niu2-avatar">{player.avatar}</span>
+        <Avatar avatar={player.avatar} size="md" />
         <div className="niu2-seat-info">
           <div className="niu2-name">{player.name}</div>
           <div className="niu2-chips">{player.chips} 筹</div>

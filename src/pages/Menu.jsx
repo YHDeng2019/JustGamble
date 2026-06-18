@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { refreshSessionUser } from '../auth/session';
+import Avatar from '../ui/Avatar';
 
 const GAMES = [
   {
@@ -90,7 +91,7 @@ const Menu = ({ onSelectGame, onSettings, onSwitchUser, stealthMode, onToggleSte
       <div className="menu-bg"></div>
       <div className="menu-header">
         <div className="current-user">
-          <span className="user-avatar">{user.avatar}</span>
+          <Avatar avatar={user.avatar} size="lg" />
           <span className="user-name">{user.displayName}</span>
         </div>
         <div className="settings-dropdown">

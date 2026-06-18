@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import { OnlineGameEngine } from '../game/onlineEngine';
 import { getRoom, leaveRoom } from '../services/roomService';
 import { getFirebaseDB } from '../services/firebase';
+import Avatar from '../ui/Avatar';
 import { ref, onValue, update, off, get, set } from 'firebase/database';
 import { startHeartbeat, stopHeartbeat, isPlayerOnline } from '../services/heartbeatService';
 import { EMOJIS, sendEmoji, subscribeToEmojis } from '../services/emojiService';
@@ -1311,7 +1312,7 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
                     className="btn item-target-player-btn"
                     onClick={() => handleUseItem(p.id)}
                   >
-                    {p.avatar} {p.name}
+                    <Avatar avatar={p.avatar} size="sm" /> {p.name}
                   </button>
                 ))}
             </div>

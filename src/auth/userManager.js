@@ -1,7 +1,20 @@
 import { v4 as uuidv4 } from 'uuid';
 import { getUsers, saveUsers, getCurrentUser, setCurrentUser, clearCurrentUser } from './storage';
 
-const AVATARS = ['🎯', '🎲', '🃏', '🦊', '🎩', '🌸', '🧊', '🎭', '🦁', '🐉', '🌊', '⚡'];
+const AVATARS = [
+  '/avatars/av1.svg',  // 霓虹机器人
+  '/avatars/av2.svg',  // 金色机器人
+  '/avatars/av3.svg',  // 冒险者·骗子
+  '/avatars/av4.svg',  // 冒险者·赌徒
+  '/avatars/av5.svg',  // 像素·海盗
+  '/avatars/av6.svg',  // 像素·巫师
+  '/avatars/av7.svg',  // 趣味A
+  '/avatars/av8.svg',  // 趣味Joker
+  '/avatars/av9.svg',  // 毒蛇
+  '/avatars/av10.svg', // 鲨鱼
+  '/avatars/av11.svg', // 眼镜蛇
+  '/avatars/av12.svg', // 虚张声势
+];
 
 export const createUser = (displayName, avatar, pin = '') => {
   const userId = `user_${uuidv4()}`;
