@@ -9,7 +9,7 @@ const GAMES = [
     name: '德州扑克',
     subtitle: "Texas Hold'em",
     emoji: '🃏',
-    desc: '经典德州扑克，AI 对手，LLM 驱动',
+    desc: '经典德州扑克，畅享博弈',
     color: '#b638ff',
     glow: 'rgba(182,56,255,0.5)',
     modes: ['solo', 'online'],
@@ -17,9 +17,9 @@ const GAMES = [
   {
     id: 'crazy_texas',
     name: '疯狂德州',
-    subtitle: 'Crazy Texas',
+    subtitle: "Crazy Texas Hold'em",
     emoji: '🎪',
-    desc: '德州扑克 + 道具系统，换牌、偷看、护甲',
+    desc: '趣味德州，超多道具，将大局逆转吧!',
     color: '#ff6b35',
     glow: 'rgba(255,107,53,0.5)',
     modes: ['solo', 'online'],
@@ -29,10 +29,10 @@ const GAMES = [
     name: '斗牛',
     subtitle: 'Niu Niu',
     emoji: '🐂',
-    desc: '湖南经典！五张牌比牛几，庄家模式',
+    desc: '湖南经典！五张牌比大小，我near！',
     color: '#06ffa5',
     glow: 'rgba(6,255,165,0.4)',
-    modes: ['solo'],
+    modes: ['solo', 'online'],
   },
 ];
 

@@ -4,6 +4,7 @@ import SelectUser from './pages/SelectUser';
 import Menu from './pages/Menu';
 import Game from './pages/Game';
 import NiuNiuGame from './pages/NiuNiuGame';
+import NiuNiuOnlineGame from './pages/NiuNiuOnlineGame';
 import Settings from './pages/Settings';
 import OnlineLobby from './pages/OnlineLobby';
 import OnlineWaitingRoom from './pages/OnlineWaitingRoom';
@@ -13,14 +14,17 @@ import { initFirebase } from './services/firebase';
 import './styles/main.css';
 
 const PAGES = {
-  SELECT_USER: 'select_user',
-  MENU: 'menu',
-  GAME: 'game',
-  NIU_NIU: 'niu_niu',
-  SETTINGS: 'settings',
-  ONLINE_LOBBY: 'online_lobby',
+  SELECT_USER:    'select_user',
+  MENU:           'menu',
+  GAME:           'game',
+  NIU_NIU:        'niu_niu',
+  NIU_NIU_LOBBY:  'niu_niu_lobby',
+  NIU_NIU_WAITING:'niu_niu_waiting',
+  NIU_NIU_ONLINE: 'niu_niu_online',
+  SETTINGS:       'settings',
+  ONLINE_LOBBY:   'online_lobby',
   ONLINE_WAITING: 'online_waiting',
-  ONLINE_GAME: 'online_game'
+  ONLINE_GAME:    'online_game',
 };
 
 function App() {
@@ -51,7 +55,8 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (currentPage === PAGES.GAME || currentPage === PAGES.ONLINE_GAME || currentPage === PAGES.NIU_NIU) {
+    if (currentPage === PAGES.GAME || currentPage === PAGES.ONLINE_GAME ||
+        currentPage === PAGES.NIU_NIU || currentPage === PAGES.NIU_NIU_ONLINE) {
       playMusic('game');
     } else {
       playMusic('menu');
@@ -86,7 +91,11 @@ function App() {
       if (mode === 'solo') setCurrentPage(PAGES.GAME);
       else setCurrentPage(PAGES.ONLINE_LOBBY);
     } else if (gameId === 'niuniu') {
-      setCurrentPage(PAGES.NIU_NIU);
+      if (mode === 'online') {
+        setCurrentPage(PAGES.NIU_NIU_LOBBY);
+      } else {
+        setCurrentPage(PAGES.NIU_NIU);
+      }
     }
   };
 
@@ -98,6 +107,16 @@ function App() {
   const handleOnlineGameStart = (roomId) => {
     setCurrentRoomId(roomId);
     setCurrentPage(PAGES.ONLINE_GAME);
+  };
+
+  const handleNiuNiuRoomJoined = (roomId) => {
+    setCurrentRoomId(roomId);
+    setCurrentPage(PAGES.NIU_NIU_WAITING);
+  };
+
+  const handleNiuNiuOnlineStart = (roomId) => {
+    setCurrentRoomId(roomId);
+    setCurrentPage(PAGES.NIU_NIU_ONLINE);
   };
 
   const handleExitOnline = () => {
@@ -145,6 +164,32 @@ function App() {
           <NiuNiuGame
             playerCount={playerCount}
             onBack={() => setCurrentPage(PAGES.MENU)}
+            {...sharedProps}
+          />
+        );
+      case PAGES.NIU_NIU_LOBBY:
+        return (
+          <OnlineLobby
+            user={user}
+            onRoomJoined={handleNiuNiuRoomJoined}
+            onBack={() => setCurrentPage(PAGES.MENU)}
+          />
+        );
+      case PAGES.NIU_NIU_WAITING:
+        return (
+          <OnlineWaitingRoom
+            roomId={currentRoomId}
+            user={user}
+            onGameStart={handleNiuNiuOnlineStart}
+            onBack={handleExitOnline}
+          />
+        );
+      case PAGES.NIU_NIU_ONLINE:
+        return (
+          <NiuNiuOnlineGame
+            roomId={currentRoomId}
+            user={user}
+            onExit={handleExitOnline}
             {...sharedProps}
           />
         );

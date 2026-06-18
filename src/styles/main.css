@@ -2924,3 +2924,92 @@ body {
   .niu2-seat { min-width: 115px; max-width: 150px; padding: 8px 9px; }
   .niu2-card { width: 26px; height: 38px; }
 }
+
+/* ===== 斗牛 v2 补充样式 ===== */
+.niu2-pool-badge {
+  margin-left: 8px;
+  background: rgba(255,214,10,0.2);
+  border: 1px solid rgba(255,214,10,0.5);
+  color: var(--neon-gold);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.niu2-felt-pool {
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.8);
+  font-weight: 700;
+  text-align: center;
+}
+
+.niu2-felt-rounds {
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.45);
+  margin-top: 4px;
+  text-align: center;
+}
+
+.niu2-banker-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.niu2-info-row {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.niu2-info-row strong {
+  color: var(--neon-gold);
+}
+
+.niu2-settle-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.niu2-settle-summary {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.niu2-banker-opt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.niu2-banker-opt-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #ff6b35;
+}
+
+.niu2-banker-opt-btns {
+  display: flex;
+  gap: 12px;
+}
+
+.niu2-banker-opt-btns .btn {
+  min-width: 100px;
+}
+
+/* stealth */
+.stealth-mode .niu2-pool-badge { background: #eee; border-color: #999; color: #333; }
+.stealth-mode .niu2-felt-pool { color: #333; }
+.stealth-mode .niu2-banker-opt-title { color: #333; }
