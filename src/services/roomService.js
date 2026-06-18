@@ -20,7 +20,8 @@ export const createRoom = async (hostUser, settings) => {
       maxPlayers: settings.maxPlayers || 4,
       initialChips: settings.initialChips || 1000,
       smallBlind: settings.smallBlind || 10,
-      bigBlind: settings.bigBlind || 20
+      bigBlind: settings.bigBlind || 20,
+      funMode: settings.funMode || false
     },
     players: {
       [hostUser.userId]: {

@@ -68,6 +68,7 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
   const [shopRefreshing, setShopRefreshing] = useState(false);
   const [shopRefreshCount, setShopRefreshCount] = useState(0);
   const shopIntervalRef = useRef(null);
+  const shopWasActiveRef = useRef(false);
 
   const engineRef = useRef(null);
   const isHost = room?.hostId === user.userId;
@@ -457,6 +458,7 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
   useEffect(() => {
     const shopPhase = gameState?.shopPhase;
     if (shopPhase?.active && shopPhase?.startsAt) {
+      shopWasActiveRef.current = true;
       const elapsed = Date.now() - shopPhase.startsAt;
       const remaining = Math.max(0, Math.ceil((shopPhase.durationMs - elapsed) / 1000));
       setShopCountdown(remaining);
@@ -466,7 +468,12 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
       }, 1000);
     } else {
       clearInterval(shopIntervalRef.current);
-      setShopOffers([]);
+      // 仅在商店确实从「开启」转为「关闭」时清空报价；
+      // 避免挂载初期 gameState 为 null 时把刚到达的报价清掉
+      if (shopWasActiveRef.current) {
+        setShopOffers([]);
+        shopWasActiveRef.current = false;
+      }
     }
     return () => clearInterval(shopIntervalRef.current);
   }, [gameState?.shopPhase?.active]);
