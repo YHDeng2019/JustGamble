@@ -3,9 +3,7 @@ import { getSessionUser, logoutSession } from './auth/session';
 import SelectUser from './pages/SelectUser';
 import Menu from './pages/Menu';
 import Game from './pages/Game';
-import FunLobby from './pages/FunLobby';
 import NiuNiuGame from './pages/NiuNiuGame';
-import History from './pages/History';
 import Settings from './pages/Settings';
 import OnlineLobby from './pages/OnlineLobby';
 import OnlineWaitingRoom from './pages/OnlineWaitingRoom';
@@ -18,9 +16,7 @@ const PAGES = {
   SELECT_USER: 'select_user',
   MENU: 'menu',
   GAME: 'game',
-  FUN_LOBBY: 'fun_lobby',
   NIU_NIU: 'niu_niu',
-  HISTORY: 'history',
   SETTINGS: 'settings',
   ONLINE_LOBBY: 'online_lobby',
   ONLINE_WAITING: 'online_waiting',
@@ -42,12 +38,8 @@ function App() {
       setUser(sessionUser);
       setCurrentPage(PAGES.MENU);
     }
-
-    // Firebase 初始化移到用户实际需要时（进入联机大厅）
-    // 不在启动时强制初始化，避免未配置时报错
   }, []);
 
-  // 首次用户手势解锁音频（浏览器自动播放策略）
   useEffect(() => {
     const handler = () => unlockAudio();
     window.addEventListener('pointerdown', handler, { once: true });
@@ -58,16 +50,14 @@ function App() {
     };
   }, []);
 
-  // 根据当前页面切换背景音乐：游戏内用 game BGM，其余界面用 menu BGM
   useEffect(() => {
-    if (currentPage === PAGES.GAME || currentPage === PAGES.ONLINE_GAME) {
+    if (currentPage === PAGES.GAME || currentPage === PAGES.ONLINE_GAME || currentPage === PAGES.NIU_NIU) {
       playMusic('game');
     } else {
       playMusic('menu');
     }
   }, [currentPage]);
 
-  // 音量控制：静音时关闭背景音乐
   useEffect(() => {
     setMusicMuted(!soundEnabled);
   }, [soundEnabled]);
@@ -83,23 +73,21 @@ function App() {
     setCurrentPage(PAGES.MENU);
   };
 
-  const handleStartGame = (count, fm = false) => {
+  // gameId: 'texas' | 'crazy_texas' | 'niuniu'
+  // mode: 'solo' | 'online'
+  const handleSelectGame = (gameId, mode, count = 4) => {
     setPlayerCount(count);
-    setFunMode(fm);
-    setCurrentPage(PAGES.GAME);
-  };
-
-  const handleOnlineMode = () => {
-    setCurrentPage(PAGES.ONLINE_LOBBY);
-  };
-
-  const handleFunMode = () => {
-    setCurrentPage(PAGES.FUN_LOBBY);
-  };
-
-  const handleStartNiuNiu = (count) => {
-    setPlayerCount(count);
-    setCurrentPage(PAGES.NIU_NIU);
+    if (gameId === 'texas') {
+      setFunMode(false);
+      if (mode === 'solo') setCurrentPage(PAGES.GAME);
+      else setCurrentPage(PAGES.ONLINE_LOBBY);
+    } else if (gameId === 'crazy_texas') {
+      setFunMode(true);
+      if (mode === 'solo') setCurrentPage(PAGES.GAME);
+      else setCurrentPage(PAGES.ONLINE_LOBBY);
+    } else if (gameId === 'niuniu') {
+      setCurrentPage(PAGES.NIU_NIU);
+    }
   };
 
   const handleRoomJoined = (roomId) => {
@@ -123,6 +111,13 @@ function App() {
     setCurrentPage(PAGES.SELECT_USER);
   };
 
+  const sharedProps = {
+    stealthMode,
+    onToggleStealth: () => setStealthMode(!stealthMode),
+    soundEnabled,
+    onToggleSound: handleToggleSound,
+  };
+
   const renderPage = () => {
     switch (currentPage) {
       case PAGES.SELECT_USER:
@@ -130,35 +125,10 @@ function App() {
       case PAGES.MENU:
         return (
           <Menu
-            onStartGame={handleStartGame}
-            onOnlineMode={handleOnlineMode}
-            onFunMode={handleFunMode}
-            onHistory={() => setCurrentPage(PAGES.HISTORY)}
+            onSelectGame={handleSelectGame}
             onSettings={() => setCurrentPage(PAGES.SETTINGS)}
             onSwitchUser={handleLogout}
-            stealthMode={stealthMode}
-            onToggleStealth={() => setStealthMode(!stealthMode)}
-            soundEnabled={soundEnabled}
-            onToggleSound={handleToggleSound}
-          />
-        );
-      case PAGES.FUN_LOBBY:
-        return (
-          <FunLobby
-            onBack={() => setCurrentPage(PAGES.MENU)}
-            onStartTexas={(count) => handleStartGame(count, true)}
-            onOnlineTexas={handleOnlineMode}
-            onStartNiuNiu={handleStartNiuNiu}
-            stealthMode={stealthMode}
-          />
-        );
-      case PAGES.NIU_NIU:
-        return (
-          <NiuNiuGame
-            playerCount={playerCount}
-            onBack={() => setCurrentPage(PAGES.FUN_LOBBY)}
-            stealthMode={stealthMode}
-            soundEnabled={soundEnabled}
+            {...sharedProps}
           />
         );
       case PAGES.GAME:
@@ -167,14 +137,17 @@ function App() {
             playerCount={playerCount}
             funMode={funMode}
             onBack={() => setCurrentPage(PAGES.MENU)}
-            stealthMode={stealthMode}
-            onToggleStealth={() => setStealthMode(!stealthMode)}
-            soundEnabled={soundEnabled}
-            onToggleSound={handleToggleSound}
+            {...sharedProps}
           />
         );
-      case PAGES.HISTORY:
-        return <History onBack={() => setCurrentPage(PAGES.MENU)} />;
+      case PAGES.NIU_NIU:
+        return (
+          <NiuNiuGame
+            playerCount={playerCount}
+            onBack={() => setCurrentPage(PAGES.MENU)}
+            {...sharedProps}
+          />
+        );
       case PAGES.SETTINGS:
         return (
           <Settings
@@ -205,10 +178,7 @@ function App() {
             roomId={currentRoomId}
             user={user}
             onExit={handleExitOnline}
-            stealthMode={stealthMode}
-            onToggleStealth={() => setStealthMode(!stealthMode)}
-            soundEnabled={soundEnabled}
-            onToggleSound={handleToggleSound}
+            {...sharedProps}
           />
         );
       default:

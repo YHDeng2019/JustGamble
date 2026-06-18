@@ -7,16 +7,14 @@ import { playSound } from '../game/sound';
 const BASE_BET = 50;
 const INIT_CHIPS = 2000;
 
-// 牌型图标映射
 const HAND_ICONS = {
   [HAND_RANK.WU_HUA_NIU]: '/icons/niu/wu_hua_niu.svg',
-  [HAND_RANK.BOMB]:       '/icons/niu/bomb.svg',
+  [HAND_RANK.BOMB]:        '/icons/niu/bomb.svg',
   [HAND_RANK.WU_XIAO_NIU]:'/icons/niu/wu_xiao_niu.svg',
-  [HAND_RANK.NIU_10]:     '/icons/niu/lao_niu.svg',
-  [HAND_RANK.NO_NIU]:     '/icons/niu/no_niu.svg',
+  [HAND_RANK.NIU_10]:      '/icons/niu/lao_niu.svg',
+  [HAND_RANK.NO_NIU]:      '/icons/niu/no_niu.svg',
 };
 
-// 是否特殊牌型（触发全屏特效）
 const isSpecial = (rank) => rank >= HAND_RANK.WU_XIAO_NIU;
 
 function buildPlayers(playerCount, user) {
@@ -31,6 +29,80 @@ function buildPlayers(playerCount, user) {
 
 const PHASE = { IDLE: 'idle', REVEAL: 'reveal', RESULT: 'result' };
 
+// 单张牌组件（扑克牌风格）
+const NiuCard = ({ card, revealed, delay = 0 }) => {
+  const isRed = card && ['♥', '♦'].includes(card.suit);
+  return (
+    <div
+      className={`niu2-card${revealed ? ' revealed' : ' face-down'}`}
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      {revealed && card ? (
+        <div className={`niu2-card-face${isRed ? ' red' : ''}`}>
+          <div className="niu2-card-tl">{card.value}<br/>{card.suit}</div>
+          <div className="niu2-card-center">{card.suit}</div>
+          <div className="niu2-card-br">{card.value}<br/>{card.suit}</div>
+        </div>
+      ) : (
+        <div className="niu2-card-back">
+          <div className="niu2-card-back-inner" />
+        </div>
+      )}
+    </div>
+  );
+};
+
+// 单个座位组件
+const NiuSeat = ({ player, hand, revealed, result, chg, bet, isBanker }) => {
+  const handIcon = result ? HAND_ICONS[result.rank] : null;
+  const seatClass = [
+    'niu2-seat',
+    isBanker ? 'banker' : '',
+    player.isHuman ? 'human' : '',
+    chg > 0 ? 'win-glow' : chg < 0 ? 'lose-glow' : '',
+  ].filter(Boolean).join(' ');
+
+  return (
+    <div className={seatClass}>
+      <div className="niu2-seat-top">
+        <span className="niu2-avatar">{player.avatar}</span>
+        <div className="niu2-seat-info">
+          <div className="niu2-name">{player.name}</div>
+          <div className="niu2-chips">{player.chips} 筹</div>
+        </div>
+        {isBanker && <span className="niu2-banker-tag">庄</span>}
+        {bet > 0 && !isBanker && <span className="niu2-bet-tag">注 {bet}</span>}
+      </div>
+
+      <div className="niu2-hand">
+        {hand.length > 0 ? hand.map((card, ci) => (
+          <NiuCard key={card.id} card={card} revealed={revealed} delay={ci * 55} />
+        )) : (
+          Array.from({ length: 5 }).map((_, ci) => (
+            <div key={ci} className="niu2-card face-down placeholder" />
+          ))
+        )}
+      </div>
+
+      {revealed && result && (
+        <div className={`niu2-hand-name niu-rank-${result.rank}`}>
+          {handIcon && <img src={handIcon} className="niu2-hand-icon" alt="" />}
+          <span>{result.name}</span>
+          {MULTIPLIERS[result.rank] > 1 && (
+            <span className="niu2-multiplier">×{MULTIPLIERS[result.rank]}</span>
+          )}
+        </div>
+      )}
+
+      {chg !== null && chg !== 0 && (
+        <div className={`niu2-change${chg > 0 ? ' win' : ' lose'}`}>
+          {chg > 0 ? '+' : ''}{chg}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const NiuNiuGame = ({ playerCount, onBack, stealthMode, soundEnabled }) => {
   const user = refreshSessionUser();
   const [players, setPlayers]           = useState(() => buildPlayers(playerCount, user));
@@ -43,26 +115,22 @@ const NiuNiuGame = ({ playerCount, onBack, stealthMode, soundEnabled }) => {
   const [changes, setChanges]           = useState(null);
   const [round, setRound]               = useState(1);
   const [revealStep, setRevealStep]     = useState(0);
-  const [msg, setMsg]                   = useState('');
+  const [tableMsg, setTableMsg]         = useState('等待发牌…');
   const [gameOver, setGameOver]         = useState(false);
-  const [specialFlash, setSpecialFlash] = useState(null); // { name, icon }
+  const [specialFlash, setSpecialFlash] = useState(null);
   const [newBankerFlash, setNewBankerFlash] = useState(false);
 
   const isHumanBanker = bankerIndex === 0;
 
   const triggerSpecialEffect = useCallback((results) => {
-    // 找出最高特殊牌型
-    const specials = results
-      .filter(r => isSpecial(r.rank))
-      .sort((a, b) => b.rank - a.rank);
-    if (specials.length === 0) return;
-    const top = specials[0];
+    const top = results.filter(r => isSpecial(r.rank)).sort((a, b) => b.rank - a.rank)[0];
+    if (!top) return;
     setSpecialFlash({ name: top.name, icon: HAND_ICONS[top.rank] || '' });
     playSound('niu_special', !soundEnabled);
     setTimeout(() => setSpecialFlash(null), 2000);
   }, [soundEnabled]);
 
-  const resolveRound = useCallback((results, aiBets, _dealt, pls, bankerIdx) => {
+  const resolveRound = useCallback((results, aiBets, pls, bankerIdx) => {
     const chg = settle(bankerIdx, results, aiBets);
     setChanges(chg);
     setPhase(PHASE.RESULT);
@@ -71,17 +139,13 @@ const NiuNiuGame = ({ playerCount, onBack, stealthMode, soundEnabled }) => {
     if (humanChange > 0) playSound('niu_win', !soundEnabled);
     else if (humanChange < 0) playSound('niu_lose', !soundEnabled);
 
-    setPlayers(prev => prev.map((p, i) => ({
-      ...p,
-      chips: Math.max(0, p.chips + chg[i])
-    })));
+    setPlayers(prev => prev.map((p, i) => ({ ...p, chips: Math.max(0, p.chips + chg[i]) })));
 
-    const lines = pls.map((p, i) => {
-      const tag = i === bankerIdx ? '（庄）' : '';
+    const summary = pls.map((p, i) => {
       const sign = chg[i] >= 0 ? '+' : '';
-      return `${p.name}${tag} ${results[i].name} ${sign}${chg[i]}`;
-    });
-    setMsg(lines.join(' | '));
+      return `${p.name} ${results[i].name} ${sign}${chg[i]}`;
+    }).join(' · ');
+    setTableMsg(summary);
   }, [soundEnabled]);
 
   const runDeal = useCallback((bet, pls, bankerIdx) => {
@@ -98,6 +162,7 @@ const NiuNiuGame = ({ playerCount, onBack, stealthMode, soundEnabled }) => {
     setBets(aiBets);
     setRevealStep(0);
     setChanges(null);
+    setTableMsg('翻牌中…');
     setPhase(PHASE.REVEAL);
     playSound('niu_deal', !soundEnabled);
 
@@ -108,17 +173,16 @@ const NiuNiuGame = ({ playerCount, onBack, stealthMode, soundEnabled }) => {
       playSound('niu_reveal', !soundEnabled);
       if (step >= pls.length) {
         clearInterval(timer);
-        // 检查并播放特殊牌型特效
         const hasSpecial = results.some(r => isSpecial(r.rank));
-        const hasNiu     = results.some(r => r.rank > HAND_RANK.NO_NIU);
+        const hasNiu = results.some(r => r.rank > HAND_RANK.NO_NIU);
         setTimeout(() => {
           if (hasSpecial) {
             triggerSpecialEffect(results);
-            setTimeout(() => resolveRound(results, aiBets, dealt, pls, bankerIdx), 2100);
+            setTimeout(() => resolveRound(results, aiBets, pls, bankerIdx), 2100);
           } else {
             if (hasNiu) playSound('niu_niu', !soundEnabled);
             else playSound('niu_no_niu', !soundEnabled);
-            setTimeout(() => resolveRound(results, aiBets, dealt, pls, bankerIdx), 700);
+            setTimeout(() => resolveRound(results, aiBets, pls, bankerIdx), 700);
           }
         }, 300);
       }
@@ -143,43 +207,43 @@ const NiuNiuGame = ({ playerCount, onBack, stealthMode, soundEnabled }) => {
     setRound(r => r + 1);
     setPhase(PHASE.IDLE);
     setChanges(null);
-    setMsg('');
     setRevealStep(0);
-
-    // 庄家变更提示
+    setTableMsg('等待发牌…');
     setNewBankerFlash(true);
     playSound('niu_banker', !soundEnabled);
     setTimeout(() => setNewBankerFlash(false), 1200);
-
-    const anyOut = players.some(p => p.chips <= 0);
-    if (anyOut) setGameOver(true);
+    if (players.some(p => p.chips <= 0)) setGameOver(true);
   };
 
   const resetGame = () => {
-    const newPlayers = buildPlayers(playerCount, user);
-    setPlayers(newPlayers);
+    setPlayers(buildPlayers(playerCount, user));
     setBankerIndex(0);
     setPhase(PHASE.IDLE);
     setRound(1);
     setChanges(null);
-    setMsg('');
+    setTableMsg('等待发牌…');
     setGameOver(false);
     setHumanBet(BASE_BET);
     setSpecialFlash(null);
+    setRevealStep(0);
   };
 
-  const cardColor = (suit) => ['♥', '♦'].includes(suit) ? '#ff4757' : '#222';
+  // 分离庄家和闲家
+  const bankerPlayer = players[bankerIndex];
+  const idlePlayers = players.filter((_, i) => i !== bankerIndex);
+  const bankerHand = hands[bankerIndex] || [];
+  const bankerResult = handResults[bankerIndex];
+  const bankerChg = changes ? changes[bankerIndex] : null;
+  const bankerBet = bets[bankerIndex] || 0;
 
   const nextBankerName = players[(bankerIndex + 1) % players.length]?.name;
 
   return (
-    <div className={`niu-game-page${stealthMode ? ' stealth-mode' : ''}`}>
+    <div className={`niu2-page${stealthMode ? ' stealth-mode' : ''}`}>
       {/* 特殊牌型全屏特效 */}
       {specialFlash && (
         <div className="niu-special-flash">
-          {specialFlash.icon && (
-            <img src={specialFlash.icon} className="niu-special-flash-icon" alt="" />
-          )}
+          {specialFlash.icon && <img src={specialFlash.icon} className="niu-special-flash-icon" alt="" />}
           <div className="niu-special-flash-name">{specialFlash.name}！</div>
         </div>
       )}
@@ -192,83 +256,58 @@ const NiuNiuGame = ({ playerCount, onBack, stealthMode, soundEnabled }) => {
         </div>
       )}
 
-      <div className="niu-header">
+      {/* 顶部栏 */}
+      <div className="niu2-header">
         <button className="btn btn-icon" onClick={onBack}>←</button>
-        <div className="niu-title">
+        <div className="niu2-title">
           <img src="/icons/niu/niu_niu_logo.svg" className="niu-title-logo" alt="斗牛" />
           斗牛
         </div>
-        <div className="niu-round">第 {round} 局</div>
+        <div className="niu2-round">第 {round} 局</div>
       </div>
 
-      <div className="niu-table">
-        {players.map((player, i) => {
-          const isBanker = i === bankerIndex;
-          const hand = hands[i] || [];
-          const revealed = revealStep > i;
-          const result = handResults[i];
-          const chg = changes ? changes[i] : null;
-          const handIcon = result ? HAND_ICONS[result.rank] : null;
+      {/* 牌桌区域 */}
+      <div className="niu2-table-area">
+        {/* 庄家（顶部居中） */}
+        <div className="niu2-banker-row">
+          <NiuSeat
+            player={bankerPlayer}
+            hand={bankerHand}
+            revealed={revealStep > bankerIndex}
+            result={bankerResult}
+            chg={bankerChg}
+            bet={bankerBet}
+            isBanker={true}
+          />
+        </div>
 
-          return (
-            <div key={player.id} className={`niu-seat${isBanker ? ' banker' : ''}${player.isHuman ? ' human' : ''}${chg > 0 ? ' win-glow' : chg < 0 ? ' lose-glow' : ''}`}>
-              <div className="niu-player-info">
-                <span className="niu-avatar">{player.avatar}</span>
-                <span className="niu-name">{player.name}</span>
-                {isBanker && <span className="niu-banker-badge">庄</span>}
-                <span className="niu-chips">{player.chips}</span>
-              </div>
+        {/* 椭圆绿色桌面 */}
+        <div className="niu2-felt">
+          <div className="niu2-felt-info">{tableMsg}</div>
+        </div>
 
-              <div className="niu-hand">
-                {hand.length > 0 ? hand.map((card, ci) => (
-                  <div
-                    key={card.id}
-                    className={`niu-card${revealed ? ' revealed' : ' face-down'}`}
-                    style={{ animationDelay: `${ci * 60}ms` }}
-                  >
-                    {revealed ? (
-                      <span className="niu-card-value" style={{ color: cardColor(card.suit) }}>
-                        {card.suit}<br/>{card.value}
-                      </span>
-                    ) : (
-                      <span className="niu-card-back">🀫</span>
-                    )}
-                  </div>
-                )) : (
-                  // 占位空牌
-                  Array.from({ length: 5 }).map((_, ci) => (
-                    <div key={ci} className="niu-card niu-card-placeholder" />
-                  ))
-                )}
-              </div>
-
-              {revealed && result && (
-                <div className={`niu-hand-name niu-rank-${result.rank}`}>
-                  {handIcon && <img src={handIcon} className="niu-hand-icon" alt="" />}
-                  {result.name}
-                  {MULTIPLIERS[result.rank] > 1 && (
-                    <span className="niu-multiplier"> ×{MULTIPLIERS[result.rank]}</span>
-                  )}
-                </div>
-              )}
-
-              {chg !== null && (
-                <div className={`niu-change${chg > 0 ? ' win' : chg < 0 ? ' lose' : ' draw'}`}>
-                  {chg > 0 ? '+' : ''}{chg}
-                </div>
-              )}
-
-              {!isBanker && bets[i] > 0 && phase !== PHASE.IDLE && (
-                <div className="niu-bet-label">注: {bets[i]}</div>
-              )}
-            </div>
-          );
-        })}
+        {/* 闲家（底部横排） */}
+        <div className="niu2-players-row">
+          {idlePlayers.map((player) => {
+            const origIdx = players.findIndex(p => p.id === player.id);
+            return (
+              <NiuSeat
+                key={player.id}
+                player={player}
+                hand={hands[origIdx] || []}
+                revealed={revealStep > origIdx}
+                result={handResults[origIdx]}
+                chg={changes ? changes[origIdx] : null}
+                bet={bets[origIdx] || 0}
+                isBanker={false}
+              />
+            );
+          })}
+        </div>
       </div>
 
-      {msg && <div className="niu-msg">{msg}</div>}
-
-      <div className="niu-controls">
+      {/* 操作区 */}
+      <div className="niu2-controls">
         {phase === PHASE.IDLE && !gameOver && (
           isHumanBanker ? (
             <button className="btn btn-primary btn-large" onClick={handleDeal}>
