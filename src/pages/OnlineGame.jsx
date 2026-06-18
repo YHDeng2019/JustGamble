@@ -12,7 +12,7 @@ import { describeCurrentHand } from '../game/handEval';
 import { GAME_STAGES } from '../game/engine';
 import { addGameHistory } from '../auth/userManager';
 import { v4 as uuidv4 } from 'uuid';
-import { ITEMS, ITEM_COSTS, getItemCost, drawShopOffers, getRefreshCost } from '../game/itemSystem';
+import { ITEMS, ITEM_COSTS, getItemCost, getRefreshCost } from '../game/itemSystem';
 import Table from '../ui/Table';
 import ActionBar from '../ui/ActionBar';
 import GameLog from '../ui/GameLog';
@@ -458,6 +458,8 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
   useEffect(() => {
     const shopPhase = gameState?.shopPhase;
     if (shopPhase?.active && shopPhase?.startsAt) {
+      // 新商店阶段开启：重置刷新次数（费用从首档重新计）
+      if (!shopWasActiveRef.current) setShopRefreshCount(0);
       shopWasActiveRef.current = true;
       const elapsed = Date.now() - shopPhase.startsAt;
       const remaining = Math.max(0, Math.ceil((shopPhase.durationMs - elapsed) / 1000));
@@ -1006,13 +1008,12 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
     const myChips = gameState?.players?.find(p => p.id === user.userId)?.chips || 0;
     if (myChips < cost) return;
     setShopRefreshing(true);
-    setShopOffers(drawShopOffers());
     setShopSelected(null);
     setShopRefreshCount(prev => prev + 1);
     setTimeout(() => setShopRefreshing(false), 600);
     playSound('item_refresh', !soundEnabled);
-    // 通知服务器扣除筹码（复用 refresh_item action，房主侧会扣筹码并同步）
-    engineRef.current?.refreshItem?.().catch(() => {});
+    // 通知房主：扣筹码并重摇本玩家的展示道具，新报价经 privateShopOffers 推回
+    engineRef.current?.refreshShopOffers?.().catch(() => {});
   };
 
   const handleItemButtonClick = () => {
@@ -1286,6 +1287,9 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
               <div className={`shop-countdown-ring${shopCountdown <= 3 ? ' urgent' : ''}`}>{shopCountdown}</div>
               <div className="shop-modal-title">🎪 道具商店</div>
               <div className="shop-modal-subtitle">选择一件道具（可跳过）</div>
+              <div className="shop-modal-balance">
+                💰 我的筹码 <strong>{gameState.players?.find(p => p.id === user.userId)?.chips ?? 0}</strong>
+              </div>
             </div>
             <div className="shop-items-row">
               {shopOffers.map(itemId => {

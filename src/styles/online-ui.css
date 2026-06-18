@@ -1029,6 +1029,21 @@
   color: rgba(200, 170, 255, 0.7);
 }
 
+.shop-modal-balance {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: rgba(255, 214, 10, 0.85);
+}
+
+.shop-modal-balance strong {
+  color: var(--neon-gold, #ffd60a);
+  font-size: 1.05rem;
+  font-weight: 900;
+}
+
+.stealth-mode .shop-modal-balance { color: #444; }
+.stealth-mode .shop-modal-balance strong { color: #000; }
+
 .shop-countdown-ring {
   display: inline-flex;
   align-items: center;

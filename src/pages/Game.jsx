@@ -1095,6 +1095,9 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
               <div className={`shop-countdown-ring${shopCountdown <= 3 ? ' urgent' : ''}`}>{shopCountdown}</div>
               <div className="shop-modal-title">🎪 道具商店</div>
               <div className="shop-modal-subtitle">选择一件道具（可跳过）</div>
+              <div className="shop-modal-balance">
+                💰 我的筹码 <strong>{(pendingGameRef.current?.game || gameRef.current)?.players.find(p => p.isHuman)?.chips ?? 0}</strong>
+              </div>
             </div>
             <div className="shop-items-row">
               {shopOffers.map(itemId => {

@@ -5,7 +5,7 @@ import { localAIDecide } from '../ai/localPlayer';
 import { createDeck, shuffleDeck } from './deck';
 import { isPlayerOnline } from '../services/heartbeatService';
 import { estimateHandStrength } from './handEval';
-import { executeItem, getRefreshCost, dealItemsToPlayers, ITEM_COSTS, generateShopOffersForPlayers, aiDecideShopPurchase } from './itemSystem';
+import { executeItem, getRefreshCost, dealItemsToPlayers, ITEM_COSTS, generateShopOffersForPlayers, aiDecideShopPurchase, drawShopOffers } from './itemSystem';
 
 /**
  * 联机游戏引擎适配器
@@ -87,6 +87,7 @@ export class OnlineGameEngine {
     if (funMode) {
       this._funMode = true;
       this._shopPurchases = {};
+      this._shopRefreshCounts = {};
       this._playerItems = null;
     }
 
@@ -238,6 +239,17 @@ export class OnlineGameEngine {
           await this._handleShopPurchase(action, snapshot.ref);
         } catch (err) {
           console.error('[联机引擎] 处理商店购买失败:', err);
+          await remove(snapshot.ref);
+        }
+        return;
+      }
+
+      // 商店刷新报价动作（花筹码重摇三张展示道具）
+      if (action.action === 'shop_refresh') {
+        try {
+          await this._handleShopRefresh(action, snapshot.ref);
+        } catch (err) {
+          console.error('[联机引擎] 处理商店刷新失败:', err);
           await remove(snapshot.ref);
         }
         return;
@@ -409,6 +421,66 @@ export class OnlineGameEngine {
 
     this._shopFinalizing = false;
     console.log('[联机引擎] 商店阶段结束，游戏开始');
+  }
+
+  /**
+   * 处理商店刷新报价动作（仅房主，在 shopPhase 期间）
+   * 花费递增筹码重摇该玩家的三张展示道具
+   */
+  async _handleShopRefresh(action, actionRef) {
+    const db = getFirebaseDB();
+    const { userId } = action;
+
+    if (!this._funMode || this._shopPurchases === null) {
+      if (actionRef) await remove(actionRef);
+      return;
+    }
+
+    // 已做出购买决定的玩家不能再刷新
+    if (userId in (this._shopPurchases || {})) {
+      if (actionRef) await remove(actionRef);
+      return;
+    }
+
+    const player = this.engine.players.find(p => p.id === userId);
+    if (!player) {
+      if (actionRef) await remove(actionRef);
+      return;
+    }
+
+    // 每位玩家独立的商店刷新次数
+    if (!this._shopRefreshCounts) this._shopRefreshCounts = {};
+    const refreshCount = this._shopRefreshCounts[userId] || 0;
+    const cost = getRefreshCost(refreshCount, this.engine.bigBlind);
+
+    if (player.chips < cost) {
+      if (actionRef) await remove(actionRef);
+      return;
+    }
+
+    // 扣筹码并入池
+    player.chips -= cost;
+    this.engine.potManager.mainPot += cost;
+    this._shopRefreshCounts[userId] = refreshCount + 1;
+
+    // 重摇该玩家的三张展示道具
+    const newOffers = drawShopOffers(3);
+    await set(ref(db, `rooms/${this.roomId}/privateShopOffers/${userId}`), newOffers);
+
+    // 推送筹码变化
+    const newState = this.engine.getGameState();
+    const nextSeq = (this.lastProcessedSequence || 0) + 1;
+    this.lastProcessedSequence = nextSeq;
+    await update(ref(db, `rooms/${this.roomId}/gameState`), {
+      ...newState,
+      lastUpdate: Date.now(),
+      sequence: nextSeq,
+      funMode: true,
+      playerItems: this._playerItems || null
+    });
+
+    if (actionRef) await remove(actionRef);
+    console.log('[联机引擎] 商店报价已刷新, cost:', cost, 'for', userId);
   }
 
   /**
@@ -658,6 +730,22 @@ export class OnlineGameEngine {
         action: 'shop_purchase',
         userId: this.userId,
         itemId: itemId || null,
+        timestamp: Date.now()
+      });
+    }
+  }
+
+  /**
+   * 刷新商店报价（客户端调用）— 花费递增筹码重摇展示道具
+   */
+  async refreshShopOffers() {
+    const db = getFirebaseDB();
+    if (this.isHost) {
+      await this._handleShopRefresh({ userId: this.userId, action: 'shop_refresh' }, null);
+    } else {
+      await push(ref(db, `rooms/${this.roomId}/actions`), {
+        action: 'shop_refresh',
+        userId: this.userId,
         timestamp: Date.now()
       });
     }
@@ -1018,6 +1106,7 @@ export class OnlineGameEngine {
               await set(ref(db, `rooms/${this.roomId}/privateShopOffers/${uid}`), offers);
             }
             this._shopPurchases = {};
+            this._shopRefreshCounts = {};
             this._shopFinalizing = false;
             this._playerItems = null;
             newShopPhase = {
