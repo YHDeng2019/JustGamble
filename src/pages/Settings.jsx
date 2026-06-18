@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { refreshSessionUser, setSessionUser, logoutSession } from '../auth/session';
 import { updateUser, deleteUser, getAvatars, verifyPin } from '../auth/userManager';
 import { isSoundEnabled, setSoundEnabled, playSound, setMusicMuted } from '../game/sound';
+import Avatar from '../ui/Avatar';
 
 const Settings = ({ onBack, onLogout }) => {
   const [user, setUser] = useState(null);
@@ -164,7 +165,7 @@ const Settings = ({ onBack, onLogout }) => {
                   className={`avatar-option ${avatar === a ? 'selected' : ''}`}
                   onClick={() => setAvatar(a)}
                 >
-                  {a}
+                  <Avatar avatar={a} size="md" />
                 </div>
               ))}
             </div>
