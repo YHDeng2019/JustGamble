@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactDOM from 'react-dom';
+import Avatar from '../ui/Avatar';
 import { GameEngine, GAME_STAGES } from '../game/engine';
 import { getShuffledAIPlayers } from '../ai/personalities';
 import { localAIDecide } from '../ai/localPlayer';
@@ -1227,7 +1228,7 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
             <div className="settlement-players">
               {getPlayerStats().sort((a, b) => b.profit - a.profit).map(p => (
                 <div key={p.id} className={`settlement-player ${p.isHuman ? 'is-human' : ''}`}>
-                  <span className="sp-avatar">{p.avatar}</span>
+                  <Avatar avatar={p.avatar} size="sm" className="sp-avatar" />
                   <span className="sp-name">{p.name}</span>
                   <span className="sp-chips">{p.chips}</span>
                   <span className={`sp-profit ${p.profit >= 0 ? 'text-green' : 'text-red'}`}>
@@ -1353,7 +1354,7 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
                   className="item-target-player-btn"
                   onClick={() => handleUseItem(p.id)}
                 >
-                  {p.avatar} {p.name}
+                  <Avatar avatar={p.avatar} size="sm" /> {p.name}
                 </button>
               ))}
             </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { refreshSessionUser } from '../auth/session';
+import Avatar from '../ui/Avatar';
 
 // 花色 -> 颜色类（与游戏内四色一致）
 const suitColorClass = (suit) => {
@@ -138,7 +139,7 @@ const History = ({ onBack }) => {
                           <div className="showdown-players">
                             {sd.players.map(p => (
                               <div key={p.id} className={`sd-player ${p.isWinner ? 'sd-winner' : ''}`}>
-                                <span className="sd-avatar">{p.avatar}</span>
+                                <Avatar avatar={p.avatar} size="sm" className="sd-avatar" />
                                 <span className="sd-name">{p.name}</span>
                                 <span className="sd-hand">
                                   {p.hand.map((cid, hi) => (
