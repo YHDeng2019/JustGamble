@@ -12,7 +12,7 @@ import { describeCurrentHand } from '../game/handEval';
 import { GAME_STAGES } from '../game/engine';
 import { addGameHistory } from '../auth/userManager';
 import { v4 as uuidv4 } from 'uuid';
-import { ITEMS, ITEM_COSTS, getItemCost } from '../game/itemSystem';
+import { ITEMS, ITEM_COSTS, getItemCost, drawShopOffers } from '../game/itemSystem';
 import Table from '../ui/Table';
 import ActionBar from '../ui/ActionBar';
 import GameLog from '../ui/GameLog';
@@ -60,10 +60,12 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
   const [itemTargetMode, setItemTargetMode] = useState(null); // 当前等待选择目标的道具 ID
   const [peekEffect, setPeekEffect] = useState(null); // {card, targetName?, type} 私有效果弹窗
   const [forceShowEffect, setForceShowEffect] = useState(null); // {card, targetName} 全桌摊牌
+  const [itemEffectFlash, setItemEffectFlash] = useState(null); // { itemName, userName, emoji }
   // 商店阶段
   const [shopOffers, setShopOffers] = useState([]); // 当前玩家的3张道具报价
   const [shopSelected, setShopSelected] = useState(null);
   const [shopCountdown, setShopCountdown] = useState(10);
+  const [shopRefreshing, setShopRefreshing] = useState(false);
   const shopIntervalRef = useRef(null);
 
   const engineRef = useRef(null);
@@ -475,6 +477,15 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
     if (effect.type === 'force_show') {
       setForceShowEffect(effect);
       setTimeout(() => setForceShowEffect(null), 3500);
+    }
+    // 全局道具戏剧闪屏
+    const globalTypes = ['swap_hand', 'replace_hand', 'replace_community', 'force_show'];
+    if (globalTypes.includes(effect.type)) {
+      const itemDef = ITEMS[effect.type];
+      if (itemDef) {
+        setItemEffectFlash({ itemName: itemDef.name, userName: effect.userName || '', emoji: itemDef.emoji });
+        setTimeout(() => setItemEffectFlash(null), 2000);
+      }
     }
   }, [gameState?.lastItemEffect]);
 
@@ -980,6 +991,15 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
     }
   };
 
+  const handleShopRefreshOffers = () => {
+    if (shopRefreshing) return;
+    setShopRefreshing(true);
+    setShopOffers(drawShopOffers());
+    setShopSelected(null);
+    setTimeout(() => setShopRefreshing(false), 600);
+    playSound('item_refresh', !soundEnabled);
+  };
+
   const handleItemButtonClick = () => {
     const myItem = gameState?.playerItems?.[user.userId];
     if (!myItem || myItem.used || !myItem.item) return;
@@ -1246,7 +1266,7 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
       {/* 娱乐模式：商店弹窗 */}
       {gameState.funMode && gameState.shopPhase?.active && shopOffers.length > 0 && (
         <div className="shop-modal-overlay">
-          <div className="shop-modal">
+          <div className={`shop-modal${shopRefreshing ? ' shop-modal-refreshing' : ''}`}>
             <div className="shop-modal-header">
               <div className={`shop-countdown-ring${shopCountdown <= 3 ? ' urgent' : ''}`}>{shopCountdown}</div>
               <div className="shop-modal-title">🎪 道具商店</div>
@@ -1281,6 +1301,14 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
                 onClick={() => engineRef.current?.buyShopItem(shopSelected)}
               >
                 购买
+              </button>
+              <button
+                className="shop-refresh-btn"
+                disabled={shopRefreshing}
+                onClick={handleShopRefreshOffers}
+                title="重新展示三张道具"
+              >
+                🔄 刷新
               </button>
               <button
                 className="shop-skip-btn"
@@ -1356,7 +1384,28 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
       )}
 
       {actionBarVisible && actionBarReady && dealingComplete && (
-        <>
+        <div className="action-stack-area">
+          {gameState.funMode && (() => {
+            const myItem = gameState?.playerItems?.[user.userId];
+            if (!myItem || myItem.used || !myItem.item) return null;
+            const itemDef = ITEMS[myItem.item];
+            if (!itemDef) return null;
+            const currentStage = gameState?.stage;
+            const canUse = itemDef.stages.includes(currentStage) && actionBarReady;
+            return (
+              <div className="item-action-bar">
+                <img src={itemDef.icon} className="item-action-icon" alt={itemDef.name} />
+                <span className="item-action-name">{itemDef.name}</span>
+                <span className="item-action-desc">{itemDef.desc}</span>
+                <button
+                  className="item-action-use-btn"
+                  disabled={!canUse}
+                  onClick={handleItemButtonClick}
+                  title={canUse ? '使用道具' : `可在 ${itemDef.stages.join('/')} 阶段使用（轮到你时生效）`}
+                >使用</button>
+              </div>
+            );
+          })()}
           <div className="hand-hint">
             <span className={`your-turn-tag ${yourTurn ? 'pulse' : ''}`}>● 轮到你了</span>
             {getHumanHandHint() && (
@@ -1373,7 +1422,7 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
             pot={gameState.pot}
             currentBet={gameState.players.find(p => p.id === user.userId)?.bet || 0}
           />
-        </>
+        </div>
       )}
 
       {roundToast && (
@@ -1388,6 +1437,17 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
           <div className="allin-text">
             <span className="allin-big">ALL IN</span>
             <span className="allin-name">{allInFlash}</span>
+          </div>
+        </div>
+      )}
+
+      {itemEffectFlash && (
+        <div className="item-effect-drama">
+          <div className="item-effect-flash"></div>
+          <div className="item-effect-text">
+            <span className="item-effect-emoji">{itemEffectFlash.emoji}</span>
+            <span className="item-effect-name">{itemEffectFlash.itemName}</span>
+            <span className="item-effect-user">{itemEffectFlash.userName} 使用了道具！</span>
           </div>
         </div>
       )}
