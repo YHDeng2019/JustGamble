@@ -796,11 +796,16 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
     setSessionHistory(prev => [...prev, roundRecord]);
 
     // 显示回合结束弹窗
+    const itemCosts = {};
+    if (gameState?.funMode || state.funMode) {
+      state.players.forEach(p => { if (p.itemSpent > 0) itemCosts[p.id] = p.itemSpent; });
+    }
     setRoundSummaryData({
       players: state.players,
       result: result,
       initialChips: room?.settings?.initialChips || 1000,
-      communityCards: state.communityCards || []
+      communityCards: state.communityCards || [],
+      itemCosts
     });
     setShowRoundSummary(true);
     setIsReady(true); // 默认已准备，显示"取消准备"按钮
@@ -1578,6 +1583,7 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
           result={roundSummaryData.result}
           initialChips={roundSummaryData.initialChips}
           communityCards={roundSummaryData.communityCards}
+          itemCosts={roundSummaryData.itemCosts || {}}
           onReady={handleReady}
           onUnready={handleUnready}
           isReady={isReady}

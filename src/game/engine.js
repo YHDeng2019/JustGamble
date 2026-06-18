@@ -2,6 +2,7 @@ import { createDeck, shuffleDeck, dealCard } from './deck';
 import { evaluateHand, compareHands } from './handEval';
 import { PotManager } from './pot';
 import { debugLog } from './debugLog';
+import { applyShieldSettlement } from './itemSystem';
 
 export const GAME_STAGES = {
   WAITING: 'WAITING',
@@ -34,6 +35,7 @@ export class GameEngine {
     this.startTime = null;
     this.roundsPlayed = 0;
     this.isFirstHand = true;
+    this.funMode = false; // 娱乐模式（道具/商店），由外部设置
   }
 
   initGame(players, settings) {
@@ -89,6 +91,10 @@ export class GameEngine {
       player.handName = null;
       // 记录本手开始时的筹码，用于回合小结正确计算盈亏
       player.roundStartChips = player.chips;
+      // 娱乐模式：清空本手道具花费/护盾状态
+      player.itemSpent = 0;
+      player.shieldActive = false;
+      player.shieldRefund = 0;
     }
 
     this.stage = GAME_STAGES.DEALING;
@@ -423,6 +429,11 @@ export class GameEngine {
       }
     }
 
+    // 娱乐模式：护盾结算（输牌退还净损失的 50%），须在派彩后、置 RESULT 前
+    if (this.funMode) {
+      applyShieldSettlement(this.players);
+    }
+
     this.stage = GAME_STAGES.RESULT;
     const result = {
       winners,
@@ -441,6 +452,10 @@ export class GameEngine {
   endHand(winner) {
     winner.chips += this.potManager.mainPot;
     this.addLog(winner.name, `获胜！赢得 ${this.potManager.mainPot} 筹码`, 'green');
+    // 娱乐模式：护盾结算（全员弃牌只剩一人时也需结算）
+    if (this.funMode) {
+      applyShieldSettlement(this.players);
+    }
     this.stage = GAME_STAGES.RESULT;
     debugLog.endHandResult(winner.id, this.potManager.mainPot);
   }

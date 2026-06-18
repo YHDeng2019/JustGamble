@@ -5,7 +5,7 @@ import { localAIDecide } from '../ai/localPlayer';
 import { createDeck, shuffleDeck } from './deck';
 import { isPlayerOnline } from '../services/heartbeatService';
 import { estimateHandStrength } from './handEval';
-import { executeItem, getRefreshCost, dealItemsToPlayers, ITEM_COSTS, generateShopOffersForPlayers, aiDecideShopPurchase, drawShopOffers } from './itemSystem';
+import { executeItem, getRefreshCost, getItemCost, drawRandomItem, generateShopOffersForPlayers, aiDecideShopPurchase, drawShopOffers } from './itemSystem';
 
 /**
  * 联机游戏引擎适配器
@@ -54,6 +54,8 @@ export class OnlineGameEngine {
 
     // 初始化本地引擎
     this.engine.initGame(players, room.settings);
+    // 娱乐模式标记，使引擎在摊牌时执行护盾结算（与单人一致）
+    this.engine.funMode = room.settings?.funMode || false;
 
     // 生成确定性洗牌种子并洗牌
     const seed = Date.now();
@@ -337,9 +339,10 @@ export class OnlineGameEngine {
     if (itemId) {
       const player = this.engine.players.find(p => p.id === userId);
       if (player) {
-        const cost = (ITEM_COSTS[itemId] || 5) * this.engine.bigBlind;
+        const cost = getItemCost(itemId, this.engine.bigBlind);
         if (player.chips >= cost) {
           player.chips -= cost;
+          player.itemSpent = (player.itemSpent || 0) + cost; // 记录道具花费，回合小结单列显示
           if (!this._playerItems) this._playerItems = {};
           this._playerItems[userId] = {
             item: itemId,
@@ -392,9 +395,10 @@ export class OnlineGameEngine {
       const offers = snap.exists() ? snap.val() : [];
       const choice = aiDecideShopPurchase(player, offers, bigBlind);
       if (choice) {
-        const cost = (ITEM_COSTS[choice] || 5) * bigBlind;
+        const cost = getItemCost(choice, bigBlind);
         if (player.chips >= cost) {
           player.chips -= cost;
+          player.itemSpent = (player.itemSpent || 0) + cost;
           if (!this._playerItems) this._playerItems = {};
           this._playerItems[player.id] = {
             item: choice, used: false, refreshCount: 0,
@@ -462,9 +466,9 @@ export class OnlineGameEngine {
       return;
     }
 
-    // 扣筹码并入池
+    // 扣筹码（与单人一致：刷新花费的筹码销毁，不入池），记录道具花费
     player.chips -= cost;
-    this.engine.potManager.mainPot += cost;
+    player.itemSpent = (player.itemSpent || 0) + cost;
     this._shopRefreshCounts[userId] = refreshCount + 1;
 
     // 重摇该玩家的三张展示道具

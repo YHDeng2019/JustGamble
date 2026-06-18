@@ -10,7 +10,7 @@ import { refreshSessionUser } from '../auth/session';
 import { addGameHistory } from '../auth/userManager';
 import { debugLog } from '../game/debugLog';
 import { playSound } from '../game/sound';
-import { ITEMS, ITEM_COSTS, getItemCost, drawRandomItem, drawShopOffers, generateShopOffersForPlayers, getRefreshCost, executeItem, applyShieldSettlement, aiDecideShopPurchase } from '../game/itemSystem';
+import { ITEMS, ITEM_COSTS, getItemCost, drawRandomItem, drawShopOffers, generateShopOffersForPlayers, getRefreshCost, executeItem, aiDecideShopPurchase } from '../game/itemSystem';
 import Table from '../ui/Table';
 import ActionBar from '../ui/ActionBar';
 import GameLog from '../ui/GameLog';
@@ -60,7 +60,6 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
   const shopCountdownRef = React.useRef(null);
   const shopIntervalRef = React.useRef(null);
   const pendingGameRef = React.useRef(null); // 商店结束后要继续的游戏&设置
-  const playerItemSpentRef = React.useRef({}); // { [playerId]: totalChipsSpent }
   const countdownRef = React.useRef(null);
   const gameRef = React.useRef(null); // 始终指向当前引擎实例，避免 state 闭包陷阱
   const wasHumanTurnRef = React.useRef(false); // 追踪上一次是否人类回合
@@ -159,6 +158,7 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
 
     const newGame = new GameEngine();
     newGame.initGame(players, currentUser.settings);
+    newGame.funMode = funMode; // 娱乐模式：引擎在摊牌时执行护盾结算
     gameRef.current = newGame;
     setGame(newGame);
     setGameState(newGame.getGameState());
@@ -248,6 +248,7 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
           const cost = getItemCost(chosenItem, bigBlind);
           if (aiPlayer.chips >= cost) {
             aiPlayer.chips -= cost;
+            aiPlayer.itemSpent = (aiPlayer.itemSpent || 0) + cost;
             setPlayerItems(prev => ({
               ...prev,
               [aiPlayer.id]: { item: chosenItem, used: false, refreshCount: 0, refreshCost: getRefreshCost(0, bigBlind) }
@@ -279,7 +280,7 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
         const cost = getItemCost(humanChoice, bigBlind);
         if (humanPlayer.chips >= cost) {
           humanPlayer.chips -= cost;
-          playerItemSpentRef.current[humanPlayer.id] = (playerItemSpentRef.current[humanPlayer.id] || 0) + cost;
+          humanPlayer.itemSpent = (humanPlayer.itemSpent || 0) + cost;
           setPlayerItems(prev => ({
             ...prev,
             [humanPlayer.id]: { item: humanChoice, used: false, refreshCount: 0, refreshCost: getRefreshCost(0, bigBlind) }
@@ -304,6 +305,8 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
     const cost = getRefreshCost(shopRefreshCount, bigBlind);
     if (humanPlayer.chips < cost) return;
     humanPlayer.chips -= cost;
+    humanPlayer.itemSpent = (humanPlayer.itemSpent || 0) + cost;
+    playSound('item_refresh', !soundEnabled);
     setShopRefreshing(true);
     setTimeout(() => {
       setShopOffers(drawShopOffers(3));
@@ -377,6 +380,7 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
     if (humanPlayer.chips < cost) return;
 
     humanPlayer.chips -= cost;
+    humanPlayer.itemSpent = (humanPlayer.itemSpent || 0) + cost;
     const newItem = drawRandomItem();
     const newCount = itemState.refreshCount + 1;
     setPlayerItems(prev => ({
@@ -728,10 +732,7 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
     const currentUser = refreshSessionUser();
     if (!currentUser) return;
 
-    // 娱乐模式 shield 结算
-    if (funMode) {
-      applyShieldSettlement(currentGame.players);
-    }
+    // 护盾结算已移至引擎 showdown()/endHand()（funMode 时统一执行）
 
     const winnerIds = Object.keys(result.winners);
     const winnerNames = winnerIds.map(id => currentGame.players.find(p => p.id === id)?.name).filter(Boolean);
@@ -777,12 +778,16 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
     debugLog.finishGameResult(roundRecord);
 
     // 显示回合结束弹窗
+    const itemCosts = {};
+    if (funMode) {
+      currentGame.players.forEach(p => { if (p.itemSpent > 0) itemCosts[p.id] = p.itemSpent; });
+    }
     setRoundSummaryData({
       players: currentGame.players,
       result: result,
       initialChips: currentUser.settings.initialChips,
       communityCards: currentGame.communityCards || [],
-      itemCosts: funMode ? { ...playerItemSpentRef.current } : {}
+      itemCosts
     });
     setShowRoundSummary(true);
 
@@ -840,7 +845,6 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
     setTimeout(() => {
       currentGame.dealInitialCards();
       setPlayerItems({});
-      playerItemSpentRef.current = {};
       setGameState(currentGame.getGameState());
       animateDealing(currentGame, currentUser.settings);
     }, 600);

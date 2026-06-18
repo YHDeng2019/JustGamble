@@ -114,7 +114,10 @@ const RoundSummary = ({
             // 本回合盈亏 = 当前筹码 - 本手开始时筹码（而非整局初始筹码）
             // 回退到 initialChips 以兼容旧数据
             const baseChips = player.roundStartChips ?? initialChips;
-            const profit = player.chips - baseChips;
+            // 道具花费单列显示；盈亏列加回道具花费，使其仅反映「牌局输赢」，
+            // 不与购买道具的消费混在一起
+            const itemSpent = itemCosts[player.id] || 0;
+            const profit = player.chips - baseChips + itemSpent;
             // 牌型名称：优先用玩家自带的 handName（摊牌时引擎已设置并随状态同步），
             // 回退到 result.playerHands（可能是对象 {rank,name,...} 或字符串）
             const handData = result.playerHands?.[player.id];
@@ -140,7 +143,7 @@ const RoundSummary = ({
                 </div>
                 {Object.keys(itemCosts).length > 0 && (
                   <div className="col-item-cost">
-                    {itemCosts[player.id] ? `-${itemCosts[player.id]}` : '-'}
+                    {itemSpent ? `-${itemSpent}` : '-'}
                   </div>
                 )}
                 <div className="col-hand">
