@@ -99,9 +99,6 @@ const PlayerSeat = ({ player, isCurrent, isDealer, position, aiType, isThinking,
             <img src={ITEMS[itemState.item]?.icon} className="item-badge-icon" alt="" />
           </div>
         )}
-        {!isMyItem && itemState && itemState.item && !itemState.used && (
-          <div className="item-badge item-badge-hidden" title="对手有道具">🎁</div>
-        )}
 
         <div className="player-chips">{player.chips}</div>
         {player.bet > 0 && <div className="player-bet">下注: {player.bet}</div>}

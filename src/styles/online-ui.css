@@ -1232,6 +1232,86 @@
   border-color: #777;
 }
 
+/* 道具操作栏（单机娱乐模式，持有道具时显示在 ActionBar 上方） */
+.item-action-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(20, 10, 40, 0.88);
+  border: 1px solid rgba(160, 100, 255, 0.5);
+  border-radius: 12px;
+  padding: 8px 14px;
+  margin: 0 auto 8px;
+  max-width: 600px;
+  box-shadow: 0 0 12px rgba(160, 100, 255, 0.25);
+  animation: shopModalIn 0.25s ease;
+}
+.item-action-icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+.item-action-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #c084fc;
+  white-space: nowrap;
+}
+.item-action-desc {
+  font-size: 0.75rem;
+  color: #a0a0b0;
+  flex: 1;
+}
+.item-action-used {
+  font-size: 0.75rem;
+  color: #666;
+  white-space: nowrap;
+}
+.item-action-use-btn {
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 6px 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.item-action-use-btn:hover:not(:disabled) {
+  transform: scale(1.05);
+  opacity: 0.9;
+}
+.item-action-use-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.item-action-refresh-btn {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px;
+  color: #aaa;
+  font-size: 0.75rem;
+  padding: 5px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+}
+.item-action-refresh-btn:hover:not(:disabled) { color: #fff; border-color: #aaa; }
+.item-action-refresh-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* 隐身模式覆盖 */
+.stealth-mode .item-action-bar {
+  background: #f8f8f8;
+  border: 1px solid #999;
+  box-shadow: none;
+}
+.stealth-mode .item-action-name { color: #333; }
+.stealth-mode .item-action-desc { color: #555; }
+.stealth-mode .item-action-use-btn { background: #333; }
+.stealth-mode .item-action-refresh-btn { background: #eee; color: #333; border-color: #999; }
+
 @media (max-width: 768px) {
   .shop-modal { padding: 20px 16px; }
   .shop-items-row { gap: 8px; }

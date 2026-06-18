@@ -1001,6 +1001,45 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
         playerItems={playerItems}
       />
 
+      {/* 娱乐模式：道具操作栏（持有道具时始终显示） */}
+      {funMode && dealingComplete && (() => {
+        const humanPlayer = gameRef.current?.players.find(p => p.isHuman);
+        const itemState = humanPlayer ? playerItems[humanPlayer.id] : null;
+        if (!itemState || !itemState.item) return null;
+        const itemDef = ITEMS[itemState.item];
+        if (!itemDef) return null;
+        const currentStage = gameState?.stage;
+        const canUse = !itemState.used && itemDef.stages.includes(currentStage);
+        const bigBlind = gameRef.current?.getGameState().bigBlind || 20;
+        const refreshCost = getRefreshCost(itemState.refreshCount || 0, bigBlind);
+        const canRefresh = !itemState.used && (humanPlayer?.chips || 0) >= refreshCost;
+        return (
+          <div className="item-action-bar">
+            <img src={itemDef.icon} className="item-action-icon" alt={itemDef.name} />
+            <span className="item-action-name">{itemDef.name}</span>
+            <span className="item-action-desc">{itemDef.desc}</span>
+            {itemState.used ? (
+              <span className="item-action-used">已使用</span>
+            ) : (
+              <>
+                <button
+                  className="item-action-use-btn"
+                  disabled={!canUse}
+                  onClick={handleItemButtonClick}
+                  title={canUse ? '使用道具' : `可在 ${itemDef.stages.join('/')} 阶段使用`}
+                >使用</button>
+                <button
+                  className="item-action-refresh-btn"
+                  disabled={!canRefresh}
+                  onClick={handleRefreshItem}
+                  title={`刷新 (-${refreshCost} 筹码)`}
+                >刷新 {refreshCost}</button>
+              </>
+            )}
+          </div>
+        );
+      })()}
+
       {getValidActions().length > 0 && !roundToast && dealingComplete && actionBarReady && (
         <>
           <div className="hand-hint">
