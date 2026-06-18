@@ -12,7 +12,7 @@ import { describeCurrentHand } from '../game/handEval';
 import { GAME_STAGES } from '../game/engine';
 import { addGameHistory } from '../auth/userManager';
 import { v4 as uuidv4 } from 'uuid';
-import { ITEMS, ITEM_COSTS, getItemCost, drawShopOffers } from '../game/itemSystem';
+import { ITEMS, ITEM_COSTS, getItemCost, drawShopOffers, getRefreshCost } from '../game/itemSystem';
 import Table from '../ui/Table';
 import ActionBar from '../ui/ActionBar';
 import GameLog from '../ui/GameLog';
@@ -66,6 +66,7 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
   const [shopSelected, setShopSelected] = useState(null);
   const [shopCountdown, setShopCountdown] = useState(10);
   const [shopRefreshing, setShopRefreshing] = useState(false);
+  const [shopRefreshCount, setShopRefreshCount] = useState(0);
   const shopIntervalRef = useRef(null);
 
   const engineRef = useRef(null);
@@ -993,11 +994,18 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
 
   const handleShopRefreshOffers = () => {
     if (shopRefreshing) return;
+    const bigBlind = gameState?.bigBlind || 20;
+    const cost = getRefreshCost(shopRefreshCount, bigBlind);
+    const myChips = gameState?.players?.find(p => p.id === user.userId)?.chips || 0;
+    if (myChips < cost) return;
     setShopRefreshing(true);
     setShopOffers(drawShopOffers());
     setShopSelected(null);
+    setShopRefreshCount(prev => prev + 1);
     setTimeout(() => setShopRefreshing(false), 600);
     playSound('item_refresh', !soundEnabled);
+    // 通知服务器扣除筹码（复用 refresh_item action，房主侧会扣筹码并同步）
+    engineRef.current?.refreshItem?.().catch(() => {});
   };
 
   const handleItemButtonClick = () => {
@@ -1302,14 +1310,22 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
               >
                 购买
               </button>
-              <button
-                className="shop-refresh-btn"
-                disabled={shopRefreshing}
-                onClick={handleShopRefreshOffers}
-                title="重新展示三张道具"
-              >
-                🔄 刷新
-              </button>
+              {(() => {
+                const bb = gameState?.bigBlind || 20;
+                const refreshCost = getRefreshCost(shopRefreshCount, bb);
+                const myChips = gameState?.players?.find(p => p.id === user.userId)?.chips || 0;
+                const cantAffordRefresh = myChips < refreshCost;
+                return (
+                  <button
+                    className="shop-refresh-btn"
+                    disabled={shopRefreshing || cantAffordRefresh}
+                    onClick={handleShopRefreshOffers}
+                    title={`花费 ${refreshCost} 筹码重新展示三张道具`}
+                  >
+                    🔄 刷新 ({refreshCost})
+                  </button>
+                );
+              })()}
               <button
                 className="shop-skip-btn"
                 onClick={() => engineRef.current?.buyShopItem(null)}

@@ -293,9 +293,17 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
     }
   };
 
-  // 娱乐模式：商店刷新（展示新的三张道具，免费）
+  // 娱乐模式：商店刷新（花费筹码刷新展示的三张道具）
   const handleShopRefresh = () => {
     if (shopRefreshing) return;
+    const game = pendingGameRef.current?.game || gameRef.current;
+    if (!game) return;
+    const humanPlayer = game.players.find(p => p.isHuman);
+    if (!humanPlayer) return;
+    const bigBlind = game.getGameState().bigBlind || 20;
+    const cost = getRefreshCost(shopRefreshCount, bigBlind);
+    if (humanPlayer.chips < cost) return;
+    humanPlayer.chips -= cost;
     setShopRefreshing(true);
     setTimeout(() => {
       setShopOffers(drawShopOffers(3));
@@ -1122,14 +1130,22 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
               >
                 购买
               </button>
-              <button
-                className="shop-refresh-btn"
-                disabled={shopRefreshing}
-                onClick={handleShopRefresh}
-                title="重新展示三张道具"
-              >
-                🔄 刷新
-              </button>
+              {(() => {
+                const bb = gameRef.current?.getGameState().bigBlind || 20;
+                const refreshCost = getRefreshCost(shopRefreshCount, bb);
+                const humanChips = (pendingGameRef.current?.game || gameRef.current)?.players.find(p => p.isHuman)?.chips || 0;
+                const cantAffordRefresh = humanChips < refreshCost;
+                return (
+                  <button
+                    className="shop-refresh-btn"
+                    disabled={shopRefreshing || cantAffordRefresh}
+                    onClick={handleShopRefresh}
+                    title={`花费 ${refreshCost} 筹码重新展示三张道具`}
+                  >
+                    🔄 刷新 ({refreshCost})
+                  </button>
+                );
+              })()}
               <button
                 className="shop-skip-btn"
                 onClick={() => {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { isFirebaseConfigured } from '../services/firebase';
 import { createRoom, joinRoom, getPublicRooms, subscribeToPublicRooms } from '../services/roomService';
 
-const OnlineLobby = ({ user, gameType = 'texas', onRoomJoined, onBack }) => {
+const OnlineLobby = ({ user, gameType = 'texas', funMode: initialFunMode = false, onRoomJoined, onBack }) => {
   const [mode, setMode] = useState('menu'); // menu | create | join | browse
   const [roomCode, setRoomCode] = useState('');
   const [publicRooms, setPublicRooms] = useState([]);
@@ -15,7 +15,7 @@ const OnlineLobby = ({ user, gameType = 'texas', onRoomJoined, onBack }) => {
   const [initialChips, setInitialChips] = useState(1000);
   const [smallBlind, setSmallBlind] = useState(10);
   const [bigBlind, setBigBlind] = useState(20);
-  const [funMode, setFunMode] = useState(false);
+  const [funMode, setFunMode] = useState(initialFunMode);
 
   useEffect(() => {
     // 进入联机大厅时才初始化 Firebase

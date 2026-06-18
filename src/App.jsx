@@ -206,6 +206,7 @@ function App() {
         return (
           <OnlineLobby
             user={user}
+            funMode={funMode}
             onRoomJoined={handleRoomJoined}
             onBack={() => setCurrentPage(PAGES.MENU)}
           />
