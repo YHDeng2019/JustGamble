@@ -89,6 +89,7 @@ export class OnlineGameEngine {
       this._shopPurchases = {};
       this._shopRefreshCounts = {};
       this._playerItems = null;
+      this._shopPhase = { active: true, startsAt: shopPhaseStart, durationMs: 10000 };
     }
 
     // 将状态推送到 Firebase
@@ -406,6 +407,9 @@ export class OnlineGameEngine {
     // 清理商店数据（置 null 表示本阶段已结算，计时器据此跳过）
     this._shopPurchases = null;
     const gameState = this.engine.getGameState();
+
+    // 本地立即清除商店阶段，使房主无需等待回传即可推进游戏
+    this._shopPhase = null;
 
     await update(ref(db, `rooms/${this.roomId}/gameState`), {
       ...gameState,
@@ -840,6 +844,8 @@ export class OnlineGameEngine {
 
     if (!this.isHost) return;
     if (this.aiDecisionPending) return;
+    // 商店阶段未结束前，不推进游戏（AI 不行动）
+    if (this._shopPhase?.active) return;
 
     const state = this.engine.getGameState();
     const currentPlayer = state.players[state.currentPlayerIndex];
@@ -952,6 +958,8 @@ export class OnlineGameEngine {
    */
   async checkPlayerTimeouts() {
     if (!this.isHost) return;
+    // 商店阶段未结束前，不推进游戏（不触发玩家超时）
+    if (this._shopPhase?.active) return;
 
     const db = getFirebaseDB();
     const state = this.engine.getGameState();
@@ -1052,6 +1060,8 @@ export class OnlineGameEngine {
    */
   async checkGameFlowAdvance() {
     if (!this.isHost) return;
+    // 商店阶段未结束前，不推进游戏
+    if (this._shopPhase?.active) return;
 
     const state = this.engine.getGameState();
     const db = getFirebaseDB();
