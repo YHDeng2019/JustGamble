@@ -132,6 +132,12 @@
   transition: background 0.2s ease;
 }
 
+/* 道具花费列存在时扩展网格 */
+.summary-table-header:has(.col-item-cost),
+.summary-table-row:has(.col-item-cost) {
+  grid-template-columns: 2fr 1fr 1fr 1fr 3fr;
+}
+
 .summary-table-row:hover {
   background: rgba(255, 255, 255, 0.05);
 }
@@ -165,6 +171,13 @@
   font-size: 1.1rem;
   font-weight: bold;
   color: white;
+  text-align: center;
+}
+
+.col-item-cost {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #c084fc;
   text-align: center;
 }
 

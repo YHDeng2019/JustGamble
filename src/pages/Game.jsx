@@ -9,7 +9,7 @@ import { refreshSessionUser } from '../auth/session';
 import { addGameHistory } from '../auth/userManager';
 import { debugLog } from '../game/debugLog';
 import { playSound } from '../game/sound';
-import { ITEMS, ITEM_COSTS, drawRandomItem, drawShopOffers, generateShopOffersForPlayers, getRefreshCost, executeItem, applyShieldSettlement, aiDecideShopPurchase } from '../game/itemSystem';
+import { ITEMS, ITEM_COSTS, getItemCost, drawRandomItem, drawShopOffers, generateShopOffersForPlayers, getRefreshCost, executeItem, applyShieldSettlement, aiDecideShopPurchase } from '../game/itemSystem';
 import Table from '../ui/Table';
 import ActionBar from '../ui/ActionBar';
 import GameLog from '../ui/GameLog';
@@ -53,9 +53,13 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
   const [shopOffers, setShopOffers] = useState([]); // 给人类玩家展示的3张道具
   const [shopSelected, setShopSelected] = useState(null); // 选中的 itemId
   const [shopCountdown, setShopCountdown] = useState(10);
+  const [shopRefreshing, setShopRefreshing] = useState(false);
+  const [shopRefreshCount, setShopRefreshCount] = useState(0);
+  const [itemEffectFlash, setItemEffectFlash] = useState(null); // { itemName, userName, emoji }
   const shopCountdownRef = React.useRef(null);
   const shopIntervalRef = React.useRef(null);
   const pendingGameRef = React.useRef(null); // 商店结束后要继续的游戏&设置
+  const playerItemSpentRef = React.useRef({}); // { [playerId]: totalChipsSpent }
   const countdownRef = React.useRef(null);
   const gameRef = React.useRef(null); // 始终指向当前引擎实例，避免 state 闭包陷阱
   const wasHumanTurnRef = React.useRef(false); // 追踪上一次是否人类回合
@@ -213,9 +217,12 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
     setShopOffers(humanOffers);
     setShopSelected(null);
     setShopCountdown(10);
+    setShopRefreshCount(0);
+    setShopRefreshing(false);
     setShowShopPhase(true);
 
-    // 倒计时
+    // 倒计时（清除旧计时器防止 StrictMode 双调用叠加）
+    if (shopIntervalRef.current) clearInterval(shopIntervalRef.current);
     shopIntervalRef.current = setInterval(() => {
       setShopCountdown(prev => {
         if (prev <= 1) {
@@ -237,7 +244,7 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
       setTimeout(() => {
         const chosenItem = aiDecideShopPurchase(aiPlayer, allOffers[aiPlayer.id] || [], bigBlind);
         if (chosenItem) {
-          const cost = (ITEM_COSTS[chosenItem] || 5) * bigBlind;
+          const cost = getItemCost(chosenItem, bigBlind);
           if (aiPlayer.chips >= cost) {
             aiPlayer.chips -= cost;
             setPlayerItems(prev => ({
@@ -268,9 +275,10 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
       const bigBlind = game.getGameState().bigBlind || 20;
       const humanPlayer = game.players.find(p => p.isHuman);
       if (humanPlayer) {
-        const cost = (ITEM_COSTS[humanChoice] || 5) * bigBlind;
+        const cost = getItemCost(humanChoice, bigBlind);
         if (humanPlayer.chips >= cost) {
           humanPlayer.chips -= cost;
+          playerItemSpentRef.current[humanPlayer.id] = (playerItemSpentRef.current[humanPlayer.id] || 0) + cost;
           setPlayerItems(prev => ({
             ...prev,
             [humanPlayer.id]: { item: humanChoice, used: false, refreshCount: 0, refreshCost: getRefreshCost(0, bigBlind) }
@@ -282,6 +290,18 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
     if (game && settings) {
       processTurn(game, settings);
     }
+  };
+
+  // 娱乐模式：商店刷新（展示新的三张道具，免费）
+  const handleShopRefresh = () => {
+    if (shopRefreshing) return;
+    setShopRefreshing(true);
+    setTimeout(() => {
+      setShopOffers(drawShopOffers(3));
+      setShopSelected(null);
+      setShopRefreshCount(prev => prev + 1);
+      setShopRefreshing(false);
+    }, 500);
   };
 
   // 娱乐模式：使用道具（执行效果）
@@ -309,6 +329,14 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
       ...prev,
       [humanPlayer.id]: { ...prev[humanPlayer.id], used: true }
     }));
+
+    // 全局道具：全屏戏剧提示
+    const globalItems = ['swap_hand', 'replace_hand', 'replace_community', 'force_show'];
+    if (globalItems.includes(effectData.type)) {
+      const itemDef = ITEMS[effectData.type];
+      setItemEffectFlash({ itemName: itemDef.name, userName: humanPlayer.name, emoji: itemDef.emoji });
+      setTimeout(() => setItemEffectFlash(null), 2000);
+    }
 
     // 私有 peek 效果
     if (effectData.type === 'peek_next' || effectData.type === 'peek_opponent') {
@@ -744,7 +772,8 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
       players: currentGame.players,
       result: result,
       initialChips: currentUser.settings.initialChips,
-      communityCards: currentGame.communityCards || []
+      communityCards: currentGame.communityCards || [],
+      itemCosts: funMode ? { ...playerItemSpentRef.current } : {}
     });
     setShowRoundSummary(true);
 
@@ -802,6 +831,7 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
     setTimeout(() => {
       currentGame.dealInitialCards();
       setPlayerItems({});
+      playerItemSpentRef.current = {};
       setGameState(currentGame.getGameState());
       animateDealing(currentGame, currentUser.settings);
     }, 600);
@@ -1001,70 +1031,57 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
         playerItems={playerItems}
       />
 
-      {/* 娱乐模式：道具操作栏（持有道具时始终显示） */}
-      {funMode && dealingComplete && (() => {
-        const humanPlayer = gameRef.current?.players.find(p => p.isHuman);
-        const itemState = humanPlayer ? playerItems[humanPlayer.id] : null;
-        if (!itemState || !itemState.item) return null;
-        const itemDef = ITEMS[itemState.item];
-        if (!itemDef) return null;
-        const currentStage = gameState?.stage;
-        const canUse = !itemState.used && itemDef.stages.includes(currentStage);
-        const bigBlind = gameRef.current?.getGameState().bigBlind || 20;
-        const refreshCost = getRefreshCost(itemState.refreshCount || 0, bigBlind);
-        const canRefresh = !itemState.used && (humanPlayer?.chips || 0) >= refreshCost;
-        return (
-          <div className="item-action-bar">
-            <img src={itemDef.icon} className="item-action-icon" alt={itemDef.name} />
-            <span className="item-action-name">{itemDef.name}</span>
-            <span className="item-action-desc">{itemDef.desc}</span>
-            {itemState.used ? (
-              <span className="item-action-used">已使用</span>
-            ) : (
-              <>
-                <button
-                  className="item-action-use-btn"
-                  disabled={!canUse}
-                  onClick={handleItemButtonClick}
-                  title={canUse ? '使用道具' : `可在 ${itemDef.stages.join('/')} 阶段使用`}
-                >使用</button>
-                <button
-                  className="item-action-refresh-btn"
-                  disabled={!canRefresh}
-                  onClick={handleRefreshItem}
-                  title={`刷新 (-${refreshCost} 筹码)`}
-                >刷新 {refreshCost}</button>
-              </>
-            )}
-          </div>
-        );
-      })()}
+      {/* 娱乐模式：道具操作栏（持有道具且未使用时显示，与决策栏叠放） */}
+      <div className="action-stack-area">
+        {funMode && dealingComplete && (() => {
+          const humanPlayer = gameRef.current?.players.find(p => p.isHuman);
+          const itemState = humanPlayer ? playerItems[humanPlayer.id] : null;
+          if (!itemState || !itemState.item || itemState.used) return null;
+          const itemDef = ITEMS[itemState.item];
+          if (!itemDef) return null;
+          const currentStage = gameState?.stage;
+          const canUse = itemDef.stages.includes(currentStage) && actionBarReady;
+          return (
+            <div className="item-action-bar">
+              <img src={itemDef.icon} className="item-action-icon" alt={itemDef.name} />
+              <span className="item-action-name">{itemDef.name}</span>
+              <span className="item-action-desc">{itemDef.desc}</span>
+              <button
+                className="item-action-use-btn"
+                disabled={!canUse}
+                onClick={handleItemButtonClick}
+                title={canUse ? '使用道具' : `可在 ${itemDef.stages.join('/')} 阶段使用（轮到你时生效）`}
+              >使用</button>
+            </div>
+          );
+        })()}
 
-      {getValidActions().length > 0 && !roundToast && dealingComplete && actionBarReady && (
-        <>
-          <div className="hand-hint">
-            <span className="your-turn-tag">● 轮到你了</span>
-            {getHumanHandHint() && (
-              <>
-                <span className="hand-hint-label">当前牌型</span>
-                <span className="hand-hint-value">{getHumanHandHint()}</span>
-              </>
-            )}
-          </div>
-          <ActionBar
-            actions={getValidActions()}
-            onAction={handleAction}
-            disabled={false}
-            pot={gameState.pot}
-            currentBet={gameState.players.find(p => p.isHuman)?.bet || 0}
-          />
-        </>
-      )}
+        {getValidActions().length > 0 && !roundToast && dealingComplete && actionBarReady && (
+          <>
+            <div className="hand-hint">
+              <span className="your-turn-tag">● 轮到你了</span>
+              {getHumanHandHint() && (
+                <>
+                  <span className="hand-hint-label">当前牌型</span>
+                  <span className="hand-hint-value">{getHumanHandHint()}</span>
+                </>
+              )}
+            </div>
+            <ActionBar
+              actions={getValidActions()}
+              onAction={handleAction}
+              disabled={false}
+              pot={gameState.pot}
+              currentBet={gameState.players.find(p => p.isHuman)?.bet || 0}
+            />
+          </>
+        )}
+      </div>
 
       {/* 娱乐模式：商店弹窗 */}
       {showShopPhase && (
         <div className="shop-modal-overlay">
-          <div className="shop-modal">
+          <div className={`shop-modal${shopRefreshing ? ' shop-modal-refreshing' : ''}`}>
             <div className="shop-modal-header">
               <div className={`shop-countdown-ring${shopCountdown <= 3 ? ' urgent' : ''}`}>{shopCountdown}</div>
               <div className="shop-modal-title">🎪 道具商店</div>
@@ -1075,7 +1092,7 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
                 const def = ITEMS[itemId];
                 if (!def) return null;
                 const bigBlind = gameRef.current?.getGameState().bigBlind || 20;
-                const cost = (ITEM_COSTS[itemId] || 5) * bigBlind;
+                const cost = getItemCost(itemId, bigBlind);
                 const humanChips = gameRef.current?.players.find(p => p.isHuman)?.chips || 0;
                 const cantAfford = humanChips < cost;
                 return (
@@ -1103,6 +1120,14 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
                 }}
               >
                 购买
+              </button>
+              <button
+                className="shop-refresh-btn"
+                disabled={shopRefreshing}
+                onClick={handleShopRefresh}
+                title="重新展示三张道具"
+              >
+                🔄 刷新
               </button>
               <button
                 className="shop-skip-btn"
@@ -1137,6 +1162,17 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
           <div className="allin-text">
             <span className="allin-big">ALL IN</span>
             <span className="allin-name">{allInFlash}</span>
+          </div>
+        </div>
+      )}
+
+      {itemEffectFlash && (
+        <div className="item-effect-drama">
+          <div className="item-effect-flash"></div>
+          <div className="item-effect-text">
+            <span className="item-effect-emoji">{itemEffectFlash.emoji}</span>
+            <span className="item-effect-name">{itemEffectFlash.itemName}</span>
+            <span className="item-effect-user">{itemEffectFlash.userName} 使用了道具！</span>
           </div>
         </div>
       )}
@@ -1300,6 +1336,7 @@ const Game = ({ playerCount, funMode, onBack, stealthMode, onToggleStealth, soun
           result={roundSummaryData.result}
           initialChips={roundSummaryData.initialChips}
           communityCards={roundSummaryData.communityCards}
+          itemCosts={roundSummaryData.itemCosts || {}}
           isOnlineMode={false}
         />
       )}

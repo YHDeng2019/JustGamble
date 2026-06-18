@@ -11,6 +11,17 @@ export const ITEM_COSTS = {
   shield:            12,
 };
 
+// 固定价格道具（不随大盲注缩放）
+export const ITEM_FLAT_COSTS = {
+  shield: 100,
+};
+
+// 统一费用计算：优先使用固定价格，否则 BB 倍数
+export function getItemCost(itemId, bigBlind) {
+  if (ITEM_FLAT_COSTS[itemId] !== undefined) return ITEM_FLAT_COSTS[itemId];
+  return (ITEM_COSTS[itemId] || 5) * bigBlind;
+}
+
 export const ITEMS = {
   swap_hand: {
     id: 'swap_hand',
@@ -329,7 +340,7 @@ export function aiDecideShopPurchase(player, shopItems, bigBlind) {
 
   // 过滤买得起的道具
   const affordable = shopItems.filter(id => {
-    const cost = (ITEM_COSTS[id] || 5) * bigBlind;
+    const cost = getItemCost(id, bigBlind);
     return chips >= cost;
   });
   if (affordable.length === 0) return null;

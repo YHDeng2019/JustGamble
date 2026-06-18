@@ -24,7 +24,8 @@ const RoundSummary = ({
   isReady,
   readyStatus = {},
   isOnlineMode = false,
-  onExit
+  onExit,
+  itemCosts = {}
 }) => {
   const [countdown, setCountdown] = useState(5);
 
@@ -103,6 +104,7 @@ const RoundSummary = ({
             <div className="col-player">玩家</div>
             <div className="col-chips">筹码</div>
             <div className="col-profit">盈亏</div>
+            {Object.keys(itemCosts).length > 0 && <div className="col-item-cost">道具花费</div>}
             <div className="col-hand">手牌</div>
           </div>
 
@@ -136,6 +138,11 @@ const RoundSummary = ({
                 <div className={`col-profit ${profit > 0 ? 'profit' : profit < 0 ? 'loss' : ''}`}>
                   {profit > 0 ? '+' : ''}{profit}
                 </div>
+                {Object.keys(itemCosts).length > 0 && (
+                  <div className="col-item-cost">
+                    {itemCosts[player.id] ? `-${itemCosts[player.id]}` : '-'}
+                  </div>
+                )}
                 <div className="col-hand">
                   {showCards ? (
                     <div className="hand-compact">
