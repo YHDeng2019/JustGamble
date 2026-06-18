@@ -5,6 +5,7 @@ import { getFirebaseDB } from '../services/firebase';
 import { ref, remove } from 'firebase/database';import { HAND_NAMES, MULTIPLIERS, HAND_RANK, BASE_BET, BANKER_ANTE, isSpecialHand } from '../game/niuNiuEngine';
 import { playSound } from '../game/sound';
 import Avatar from '../ui/Avatar';
+import Card from '../ui/Card';
 
 const HAND_ICONS = {
   [HAND_RANK.WU_HUA_NIU]:  '/icons/niu/wu_hua_niu.svg',
@@ -14,23 +15,12 @@ const HAND_ICONS = {
   [HAND_RANK.NO_NIU]:       '/icons/niu/no_niu.svg',
 };
 
-// 单张牌
-const NiuCard = ({ card, revealed, delay = 0 }) => {
-  const isRed = card && ['♥', '♦'].includes(card.suit);
-  return (
-    <div className={`niu2-card${revealed ? ' revealed' : ' face-down'}`} style={{ animationDelay: `${delay}ms` }}>
-      {revealed && card ? (
-        <div className={`niu2-card-face${isRed ? ' red' : ''}`}>
-          <div className="niu2-card-tl">{card.value}<br/>{card.suit}</div>
-          <div className="niu2-card-center">{card.suit}</div>
-          <div className="niu2-card-br">{card.value}<br/>{card.suit}</div>
-        </div>
-      ) : (
-        <div className="niu2-card-back"><div className="niu2-card-back-inner" /></div>
-      )}
-    </div>
-  );
-};
+// 单张牌 — 使用共享 Card 组件
+const NiuCard = ({ card, revealed, delay = 0 }) => (
+  <div className="niu2-card-wrapper" style={{ animationDelay: `${delay}ms` }}>
+    <Card card={card} flipped={!revealed} size="mini" />
+  </div>
+);
 
 const NiuSeat = ({ player, hand, revealedCount, seatIdx, result, chg, bet, isBanker, isMe }) => {
   const revealed = revealedCount > seatIdx;
@@ -57,7 +47,7 @@ const NiuSeat = ({ player, hand, revealedCount, seatIdx, result, chg, bet, isBan
             delay={ci * 55}
           />
         )) : Array.from({ length: 5 }).map((_, ci) => (
-          <div key={ci} className="niu2-card face-down placeholder" />
+          <NiuCard key={ci} card={null} revealed={false} delay={ci * 55} />
         ))}
       </div>
       {revealed && result && (

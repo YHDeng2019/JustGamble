@@ -83,6 +83,13 @@ export class OnlineGameEngine {
 
     const shopPhaseStart = funMode ? Date.now() : null;
 
+    // 房主侧娱乐模式状态初始化（subscribeToGameState 之前先就位）
+    if (funMode) {
+      this._funMode = true;
+      this._shopPurchases = {};
+      this._playerItems = null;
+    }
+
     // 将状态推送到 Firebase
     await set(ref(db, `rooms/${this.roomId}/gameState`), {
       ...gameState,
@@ -102,6 +109,15 @@ export class OnlineGameEngine {
     });
 
     console.log('[联机引擎] 游戏已初始化，玩家手牌已发放');
+
+    // 娱乐模式：10.5s 后强制结束商店阶段（与后续手牌一致）
+    if (funMode) {
+      setTimeout(() => {
+        if (this._shopPurchases !== null) {
+          this._finalizeShopPhase().catch(console.error);
+        }
+      }, 10500);
+    }
 
     // 房主开始监听非房主玩家的动作
     this.subscribeToPlayerActions();
@@ -294,6 +310,12 @@ export class OnlineGameEngine {
       return;
     }
 
+    // 商店已结算（_shopPurchases 置 null）则拒绝迟到的购买动作
+    if (this._shopPurchases === null) {
+      if (actionRef) await remove(actionRef);
+      return;
+    }
+
     // 记录购买决定
     if (!this._shopPurchases) this._shopPurchases = {};
     this._shopPurchases[userId] = itemId || null;
@@ -318,9 +340,9 @@ export class OnlineGameEngine {
 
     if (actionRef) await remove(actionRef);
 
-    // 检查是否所有玩家都完成了购买决定
-    const allPlayerIds = this.engine.players.map(p => p.id);
-    const allDecided = allPlayerIds.every(id => id in (this._shopPurchases || {}));
+    // 检查是否所有真人玩家都完成了购买决定（AI 在 _finalizeShopPhase 内自动购买）
+    const humanIds = this.engine.players.filter(p => p.isHuman).map(p => p.id);
+    const allDecided = humanIds.every(id => id in (this._shopPurchases || {}));
 
     if (allDecided) {
       await this._finalizeShopPhase();
@@ -340,6 +362,10 @@ export class OnlineGameEngine {
    * 结束商店阶段，开始游戏（仅房主）
    */
   async _finalizeShopPhase() {
+    // 防止重复结算（计时器与 allDecided 可能同时触发）
+    if (this._shopFinalizing || this._shopPurchases === null) return;
+    this._shopFinalizing = true;
+
     const db = getFirebaseDB();
     const nextSeq = (this.lastProcessedSequence || 0) + 1;
 
@@ -365,8 +391,8 @@ export class OnlineGameEngine {
       }
     }
 
-    // 清理商店数据
-    this._shopPurchases = {};
+    // 清理商店数据（置 null 表示本阶段已结算，计时器据此跳过）
+    this._shopPurchases = null;
     const gameState = this.engine.getGameState();
 
     await update(ref(db, `rooms/${this.roomId}/gameState`), {
@@ -381,6 +407,7 @@ export class OnlineGameEngine {
     // 清除私有报价节点
     await remove(ref(db, `rooms/${this.roomId}/privateShopOffers`));
 
+    this._shopFinalizing = false;
     console.log('[联机引擎] 商店阶段结束，游戏开始');
   }
 
@@ -991,6 +1018,7 @@ export class OnlineGameEngine {
               await set(ref(db, `rooms/${this.roomId}/privateShopOffers/${uid}`), offers);
             }
             this._shopPurchases = {};
+            this._shopFinalizing = false;
             this._playerItems = null;
             newShopPhase = {
               active: true,
