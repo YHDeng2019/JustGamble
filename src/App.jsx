@@ -55,13 +55,14 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (currentPage === PAGES.GAME || currentPage === PAGES.ONLINE_GAME ||
-        currentPage === PAGES.NIU_NIU || currentPage === PAGES.NIU_NIU_ONLINE) {
+    if (currentPage === PAGES.GAME || currentPage === PAGES.ONLINE_GAME) {
+      playMusic(funMode ? 'crazy_game' : 'game');
+    } else if (currentPage === PAGES.NIU_NIU || currentPage === PAGES.NIU_NIU_ONLINE) {
       playMusic('game');
     } else {
       playMusic('menu');
     }
-  }, [currentPage]);
+  }, [currentPage, funMode]);
 
   useEffect(() => {
     setMusicMuted(!soundEnabled);

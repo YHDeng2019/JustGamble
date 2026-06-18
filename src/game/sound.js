@@ -14,6 +14,7 @@ const AUDIO_SRC = {
   yourturn: '/audio/your_turn.mp3',
   menu: '/audio/welcom_bgm.wav',
   game: '/audio/gaming.mp3',
+  crazy_game: '/audio/gaming_crazy_poker.mp3',
   // 表情音效
   ewww: '/audio/ewwwww.mp3',
   laugh: '/audio/laugh.mp3',
@@ -37,7 +38,8 @@ const AUDIO_SRC = {
 // 各 BGM 目标音量（游戏内压低，让牌桌音效穿透）
 const MUSIC_VOLUME = {
   menu: 0.35,
-  game: 0.20
+  game: 0.20,
+  crazy_game: 0.20
 };
 
 let audioCtx = null;
