@@ -2646,10 +2646,11 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 12px 10px;
+  padding: 8px 8px 4px;
   gap: 0;
   overflow: hidden;
   position: relative;
+  min-height: 0;
 }
 
 /* 庄家区 */
@@ -2663,9 +2664,9 @@ body {
 /* 椭圆绿色桌面 */
 .niu2-felt {
   flex: 1;
-  min-height: 70px;
-  max-height: 130px;
-  width: 75%;
+  min-height: 55px;
+  max-height: 100px;
+  width: 80%;
   background: radial-gradient(ellipse at center, #256325 0%, #1a4d1a 60%, #0f2e0f 100%);
   border-radius: 50% / 40%;
   border: 4px solid #2d7a2d;
@@ -2674,6 +2675,7 @@ body {
     0 0 30px rgba(6,255,165,0.15),
     0 4px 20px rgba(0,0,0,0.6);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   position: relative;
@@ -2697,35 +2699,35 @@ body {
   display: flex;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
   flex-shrink: 0;
-  padding-top: 8px;
+  padding-top: 6px;
 }
 
 /* 座位 */
 .niu2-seat {
   background: rgba(15, 8, 30, 0.88);
   border: 1.5px solid rgba(255,255,255,0.12);
-  border-radius: 14px;
-  padding: 10px 12px;
-  min-width: 130px;
-  max-width: 175px;
+  border-radius: 12px;
+  padding: 8px 10px;
+  min-width: 120px;
+  max-width: 200px;
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 5px;
   position: relative;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .niu2-seat.banker {
   border-color: #06ffa5;
-  box-shadow: 0 0 16px rgba(6,255,165,0.3);
+  box-shadow: 0 0 14px rgba(6,255,165,0.3);
 }
 
 .niu2-seat.human {
   border-color: var(--neon-gold);
-  box-shadow: 0 0 12px rgba(255,214,10,0.2);
+  box-shadow: 0 0 10px rgba(255,214,10,0.2);
 }
 
 .niu2-seat.win-glow {
@@ -2735,27 +2737,30 @@ body {
 
 .niu2-seat.lose-glow {
   border-color: #ff4757;
-  box-shadow: 0 0 14px rgba(255,71,87,0.3);
+  box-shadow: 0 0 12px rgba(255,71,87,0.3);
 }
 
 .niu2-seat-top {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
 }
 
-.niu2-avatar { font-size: 1.3rem; flex-shrink: 0; }
+.niu2-avatar { font-size: 1.2rem; flex-shrink: 0; }
 
-.niu2-seat-info { flex: 1; }
+.niu2-seat-info { flex: 1; min-width: 0; }
 
 .niu2-name {
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .niu2-chips {
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   color: var(--neon-gold);
   font-weight: 600;
 }
@@ -2763,10 +2768,10 @@ body {
 .niu2-banker-tag {
   background: #06ffa5;
   color: #0a0014;
-  font-size: 0.6rem;
+  font-size: 0.58rem;
   font-weight: 900;
-  padding: 2px 6px;
-  border-radius: 6px;
+  padding: 2px 5px;
+  border-radius: 5px;
   flex-shrink: 0;
 }
 
@@ -2774,92 +2779,24 @@ body {
   background: rgba(255,214,10,0.15);
   border: 1px solid rgba(255,214,10,0.4);
   color: var(--neon-gold);
-  font-size: 0.6rem;
+  font-size: 0.58rem;
   font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 6px;
+  padding: 2px 5px;
+  border-radius: 5px;
   flex-shrink: 0;
 }
 
-/* 扑克牌手牌 */
+/* 扑克牌手牌 — 使用 Card 组件（card-mini 尺寸 42×60） */
 .niu2-hand {
   display: flex;
-  gap: 3px;
+  gap: 2px;
   justify-content: center;
+  flex-wrap: nowrap;
 }
 
-.niu2-card {
-  width: 30px;
-  height: 44px;
-  border-radius: 4px;
-  position: relative;
-  flex-shrink: 0;
-}
-
-.niu2-card.face-down .niu2-card-back {
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, #1a1a3e, #0a0a2a);
-  border-radius: 4px;
-  border: 1px solid rgba(255,255,255,0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.niu2-card-back-inner {
-  width: 22px;
-  height: 36px;
-  border-radius: 3px;
-  border: 1.5px solid rgba(182,56,255,0.5);
-  background: repeating-linear-gradient(
-    45deg, rgba(182,56,255,0.1), rgba(182,56,255,0.1) 2px,
-    transparent 2px, transparent 6px
-  );
-}
-
-.niu2-card.revealed {
+.niu2-card-wrapper {
   animation: niuCardReveal 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
-}
-
-.niu2-card-face {
-  width: 100%;
-  height: 100%;
-  background: #fff;
-  border-radius: 4px;
-  border: 1px solid rgba(0,0,0,0.15);
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-  align-items: center;
-  padding: 1px 2px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-  color: #222;
-  font-size: 0.55rem;
-  font-weight: 800;
-  text-align: left;
-  line-height: 1.1;
-}
-
-.niu2-card-face.red { color: #e74c3c; }
-
-.niu2-card-tl { font-size: 0.55rem; line-height: 1.1; }
-
-.niu2-card-center {
-  font-size: 0.85rem;
-  text-align: center;
-}
-
-.niu2-card-br {
-  font-size: 0.55rem;
-  line-height: 1.1;
-  text-align: right;
-  transform: rotate(180deg);
-}
-
-.niu2-card.placeholder .niu2-card-back {
-  background: rgba(255,255,255,0.04);
-  border: 1px dashed rgba(255,255,255,0.1);
+  flex-shrink: 0;
 }
 
 /* 牌型名称 */
@@ -2901,13 +2838,13 @@ body {
 /* 操作栏 */
 .niu2-controls {
   flex-shrink: 0;
-  padding: 10px 16px 12px;
+  padding: 8px 14px 10px;
   background: rgba(0,0,0,0.55);
   border-top: 1px solid rgba(6,255,165,0.15);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 /* 隐身模式 */
@@ -3013,3 +2950,43 @@ body {
 .stealth-mode .niu2-pool-badge { background: #eee; border-color: #999; color: #333; }
 .stealth-mode .niu2-felt-pool { color: #333; }
 .stealth-mode .niu2-banker-opt-title { color: #333; }
+
+/* 斗牛自由下注输入 */
+.niu2-bet-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.niu2-bet-input {
+  width: 90px;
+  padding: 7px 10px;
+  border: 1.5px solid rgba(255,255,255,0.25);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.07);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.niu2-bet-input:focus {
+  border-color: var(--neon-gold);
+  background: rgba(255,214,10,0.06);
+}
+
+.niu2-bet-presets {
+  display: flex;
+  gap: 5px;
+}
+
+.stealth-mode .niu2-bet-input {
+  background: #fff;
+  border-color: #999;
+  color: #000;
+}

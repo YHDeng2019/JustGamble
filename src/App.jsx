@@ -171,6 +171,7 @@ function App() {
         return (
           <OnlineLobby
             user={user}
+            gameType="niuniu"
             onRoomJoined={handleNiuNiuRoomJoined}
             onBack={() => setCurrentPage(PAGES.MENU)}
           />

@@ -150,32 +150,23 @@ export function compareHands(a, b) {
 /**
  * 底池结算
  *
- * 规则：
- * 1. 庄家放 BANKER_ANTE 进底池
- * 2. 闲家与庄家比牌，输的闲家放入 bet × mult（输赢方 mult 取大值）进底池
- * 3. 赢的闲家按牌面从大到小依次从底池取出 bet × mult，取不到算损失
- * 4. 最终底池剩余归庄家
+ * 庄家在当庄首局已从外部扣款入池，这里直接使用传入的 currentPool。
+ * 输家先放入，赢家按牌面大→小依次取，剩余归庄。
  *
  * @param {number}   bankerIndex  - 庄家在 players 数组中的下标
  * @param {object[]} handResults  - evaluateHand 结果数组，与 players 对应
  * @param {number[]} bets         - 每位闲家的下注额（bankerIndex 位置忽略）
- * @param {number[]} chips        - 每位玩家当前筹码（用于约束实际能放入的金额）
- *
- * @returns {{ changes: number[], poolRemaining: number, settlements: object[] }}
- *   changes: 每位玩家筹码变化（正=赢，负=输）
- *   poolRemaining: 本局结束后底池剩余（转给庄家）
- *   settlements: 详细结算记录 [{ playerId, action, amount, pool }]
+ * @param {number[]} chips        - 每位玩家当前筹码
+ * @param {number}   currentPool  - 当前底池金额（庄家入池已在外部处理）
  */
-export function settleWithPool(bankerIndex, handResults, bets, chips) {
+export function settleWithPool(bankerIndex, handResults, bets, chips, currentPool = BANKER_ANTE) {
   const n = handResults.length;
   const changes = new Array(n).fill(0);
   const settlements = [];
   const bankerResult = handResults[bankerIndex];
 
-  // 庄家先入底池
-  let pool = BANKER_ANTE;
-  changes[bankerIndex] -= BANKER_ANTE;
-  settlements.push({ idx: bankerIndex, action: 'ante', amount: BANKER_ANTE, pool });
+  // 使用已有底池（庄家上任时一次性扣款，此处不再扣）
+  let pool = currentPool;
 
   // 收集每位闲家的比牌结果
   const losers = [];

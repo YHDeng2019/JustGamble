@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { isFirebaseConfigured } from '../services/firebase';
 import { createRoom, joinRoom, getPublicRooms, subscribeToPublicRooms } from '../services/roomService';
 
-const OnlineLobby = ({ user, onRoomJoined, onBack }) => {
+const OnlineLobby = ({ user, gameType = 'texas', onRoomJoined, onBack }) => {
   const [mode, setMode] = useState('menu'); // menu | create | join | browse
   const [roomCode, setRoomCode] = useState('');
   const [publicRooms, setPublicRooms] = useState([]);
@@ -170,19 +170,22 @@ const OnlineLobby = ({ user, onRoomJoined, onBack }) => {
             </label>
           </div>
 
-          <div className="form-group fun-mode-group">
-            <label className="fun-mode-label">
-              <input
-                type="checkbox"
-                checked={funMode}
-                onChange={(e) => setFunMode(e.target.checked)}
-              />
-              <span className="fun-mode-text">
-                🎪 娱乐模式
-                <span className="fun-mode-hint">每局自动发道具，可用筹码刷新</span>
-              </span>
-            </label>
-          </div>
+          {/* 德州扑克专属设置 */}
+          {gameType !== 'niuniu' && (
+            <div className="form-group fun-mode-group">
+              <label className="fun-mode-label">
+                <input
+                  type="checkbox"
+                  checked={funMode}
+                  onChange={(e) => setFunMode(e.target.checked)}
+                />
+                <span className="fun-mode-text">
+                  🎪 娱乐模式
+                  <span className="fun-mode-hint">每局自动发道具，可用筹码刷新</span>
+                </span>
+              </label>
+            </div>
+          )}
 
           <div className="form-group">
             <label>游戏人数</label>
@@ -206,26 +209,29 @@ const OnlineLobby = ({ user, onRoomJoined, onBack }) => {
             />
           </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label>小盲注</label>
-              <input
-                type="number"
-                value={smallBlind}
-                onChange={(e) => setSmallBlind(parseInt(e.target.value))}
-                min="1"
-              />
+          {/* 德州扑克专属：盲注设置 */}
+          {gameType !== 'niuniu' && (
+            <div className="form-row">
+              <div className="form-group">
+                <label>小盲注</label>
+                <input
+                  type="number"
+                  value={smallBlind}
+                  onChange={(e) => setSmallBlind(parseInt(e.target.value))}
+                  min="1"
+                />
+              </div>
+              <div className="form-group">
+                <label>大盲注</label>
+                <input
+                  type="number"
+                  value={bigBlind}
+                  onChange={(e) => setBigBlind(parseInt(e.target.value))}
+                  min="2"
+                />
+              </div>
             </div>
-            <div className="form-group">
-              <label>大盲注</label>
-              <input
-                type="number"
-                value={bigBlind}
-                onChange={(e) => setBigBlind(parseInt(e.target.value))}
-                min="2"
-              />
-            </div>
-          </div>
+          )}
 
           <div className="form-actions">
             <button
