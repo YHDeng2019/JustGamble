@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Card from './Card';
+import Avatar from './Avatar';
 
 /**
  * 回合结束弹窗
@@ -127,7 +128,7 @@ const RoundSummary = ({
                 className={`summary-table-row ${isWinner ? 'winner' : ''}`}
               >
                 <div className="col-player">
-                  <span className="player-avatar-small">{player.avatar}</span>
+                  <Avatar avatar={player.avatar} size="sm" className="player-avatar-small" />
                   <span className="player-name-small">{player.name}</span>
                   {isWinner && <span className="winner-icon">🏆</span>}
                 </div>
