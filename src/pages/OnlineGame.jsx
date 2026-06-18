@@ -12,7 +12,7 @@ import { describeCurrentHand } from '../game/handEval';
 import { GAME_STAGES } from '../game/engine';
 import { addGameHistory } from '../auth/userManager';
 import { v4 as uuidv4 } from 'uuid';
-import { ITEMS, ITEM_COSTS } from '../game/itemSystem';
+import { ITEMS, ITEM_COSTS, getItemCost } from '../game/itemSystem';
 import Table from '../ui/Table';
 import ActionBar from '../ui/ActionBar';
 import GameLog from '../ui/GameLog';
@@ -1257,7 +1257,7 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
                 const def = ITEMS[itemId];
                 if (!def) return null;
                 const bigBlind = gameState.bigBlind || 20;
-                const cost = (ITEM_COSTS[itemId] || 5) * bigBlind;
+                const cost = getItemCost(itemId, bigBlind);
                 const myChips = gameState.players?.find(p => p.id === user.userId)?.chips || 0;
                 const cantAfford = myChips < cost;
                 return (
