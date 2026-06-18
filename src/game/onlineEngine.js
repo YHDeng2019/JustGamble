@@ -491,26 +491,26 @@ export class OnlineGameEngine {
     const { userId, itemId, targetId } = action;
 
     if (!this._funMode || !this._playerItems) {
-      await remove(actionRef);
+      if (actionRef) await remove(actionRef);
       return;
     }
 
     const playerItem = this._playerItems[userId];
     if (!playerItem) {
-      await remove(actionRef);
+      if (actionRef) await remove(actionRef);
       return;
     }
 
     if (action.action === 'use_item') {
       if (playerItem.used || playerItem.item !== itemId) {
-        await remove(actionRef);
+        if (actionRef) await remove(actionRef);
         return;
       }
 
       const result = executeItem(this.engine, itemId, userId, targetId);
       if (!result.success) {
         console.warn('[联机引擎] 道具使用失败:', result.error);
-        await remove(actionRef);
+        if (actionRef) await remove(actionRef);
         return;
       }
 
@@ -553,7 +553,7 @@ export class OnlineGameEngine {
 
       const player = this.engine.players.find(p => p.id === userId);
       if (!player || player.chips < cost) {
-        await remove(actionRef);
+        if (actionRef) await remove(actionRef);
         return;
       }
 
@@ -587,7 +587,7 @@ export class OnlineGameEngine {
       console.log('[联机引擎] 道具已刷新:', newItem, 'cost:', cost, 'for', userId);
     }
 
-    await remove(actionRef);
+    if (actionRef) await remove(actionRef);
   }
 
   /**
