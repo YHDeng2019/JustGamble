@@ -15,6 +15,7 @@ const AUDIO_SRC = {
   menu: '/audio/welcom_bgm.wav',
   game: '/audio/gaming.mp3',
   crazy_game: '/audio/gaming_crazy_poker.mp3',
+  niuniu_game: '/audio/gaming_niuniu.mp3',
   // 表情音效
   ewww: '/audio/ewwwww.mp3',
   laugh: '/audio/laugh.mp3',
@@ -39,7 +40,8 @@ const AUDIO_SRC = {
 const MUSIC_VOLUME = {
   menu: 0.35,
   game: 0.20,
-  crazy_game: 0.20
+  crazy_game: 0.20,
+  niuniu_game: 0.20
 };
 
 let audioCtx = null;

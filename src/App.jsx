@@ -58,7 +58,7 @@ function App() {
     if (currentPage === PAGES.GAME || currentPage === PAGES.ONLINE_GAME) {
       playMusic(funMode ? 'crazy_game' : 'game');
     } else if (currentPage === PAGES.NIU_NIU || currentPage === PAGES.NIU_NIU_ONLINE) {
-      playMusic('game');
+      playMusic('niuniu_game');
     } else {
       playMusic('menu');
     }
