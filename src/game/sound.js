@@ -256,6 +256,29 @@ export const sfx = {
   },
   click: () => tone(600, 0.04, 'square', 0.05),            // 按钮点击
   yourturn: () => playSample('yourturn', AUDIO_SRC.yourturn, 0.7),  // 轮到你了：使用真实音频
+  // 斗牛音效（Web Audio 合成）
+  niu_deal: () => {                                          // 斗牛发牌：连续5次短促
+    for (let i = 0; i < 5; i++) tone(380 + i * 20, 0.07, 'triangle', 0.09, i * 0.08);
+  },
+  niu_reveal: () => sweep(320, 640, 0.18, 'triangle', 0.12), // 翻牌：上扬
+  niu_niu: () => {                                           // 有牛：欢快三音
+    tone(523, 0.12, 'sine', 0.13);
+    tone(659, 0.12, 'sine', 0.13, 0.12);
+    tone(784, 0.2,  'sine', 0.15, 0.24);
+  },
+  niu_no_niu: () => sweep(440, 220, 0.35, 'sine', 0.1),     // 没牛：下滑
+  niu_special: () => {                                       // 特殊牌型：戏剧上升
+    tone(220, 0.15, 'sawtooth', 0.1);
+    sweep(440, 1200, 0.4, 'square', 0.08, 0.1);
+    tone(880, 0.3,  'sine', 0.12, 0.3);
+  },
+  niu_win:    () => playSample('win', AUDIO_SRC.win, 0.6),
+  niu_lose:   () => sweep(440, 180, 0.5, 'sine', 0.1),
+  niu_bet:    () => playSample('chip', AUDIO_SRC.chip, 0.65),
+  niu_banker: () => {                                        // 成为庄家：庄严双音
+    tone(330, 0.15, 'triangle', 0.1);
+    tone(440, 0.2,  'triangle', 0.12, 0.15);
+  },
   // 道具音效
   item_swap: () => playSample('item_swap', AUDIO_SRC.item_swap, 0.65),
   item_peek: () => playSample('item_peek', AUDIO_SRC.item_peek, 0.6),

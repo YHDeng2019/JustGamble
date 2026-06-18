@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- 老牛/牛十：最强普通牛 -->
+  <circle cx="32" cy="32" r="28" fill="#1a0a2e" stroke="#ff6b35" stroke-width="2"/>
+  <!-- 大"牛"字 -->
+  <text x="32" y="36" font-family="serif" font-size="28" font-weight="bold" fill="#ff6b35" text-anchor="middle" opacity="0.9">牛</text>
+  <!-- 十字光芒 -->
+  <circle cx="50" cy="14" r="10" fill="#ff6b35" opacity="0.9"/>
+  <text x="50" y="18" font-family="sans-serif" font-size="9" font-weight="bold" fill="white" text-anchor="middle">10</text>
+  <!-- 底部标签 -->
+  <rect x="14" y="51" width="36" height="10" rx="4" fill="#ff6b35" opacity="0.9"/>
+  <text x="32" y="59" font-family="sans-serif" font-size="7" font-weight="bold" fill="white" text-anchor="middle">老 牛</text>
+</svg>

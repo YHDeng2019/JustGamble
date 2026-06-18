@@ -2,10 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { refreshSessionUser } from '../auth/session';
 
-const Menu = ({ onStartGame, onOnlineMode, onHistory, onSettings, onSwitchUser, stealthMode, onToggleStealth, soundEnabled, onToggleSound }) => {
+const Menu = ({ onStartGame, onOnlineMode, onFunMode, onHistory, onSettings, onSwitchUser, stealthMode, onToggleStealth, soundEnabled, onToggleSound }) => {
   const [user, setUser] = useState(null);
   const [playerCount, setPlayerCount] = useState(4);
-  const [funMode, setFunMode] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 });
   const settingsRef = useRef(null);
@@ -19,7 +18,6 @@ const Menu = ({ onStartGame, onOnlineMode, onHistory, onSettings, onSwitchUser, 
     }
   }, []);
 
-  // 计算下拉菜单位置
   useEffect(() => {
     if (showSettingsMenu && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
@@ -30,7 +28,6 @@ const Menu = ({ onStartGame, onOnlineMode, onHistory, onSettings, onSwitchUser, 
     }
   }, [showSettingsMenu]);
 
-  // 点击外部区域关闭下拉菜单
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (settingsRef.current && !settingsRef.current.contains(event.target) &&
@@ -38,11 +35,9 @@ const Menu = ({ onStartGame, onOnlineMode, onHistory, onSettings, onSwitchUser, 
         setShowSettingsMenu(false);
       }
     };
-
     if (showSettingsMenu) {
       document.addEventListener('mousedown', handleClickOutside);
     }
-
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
@@ -81,20 +76,14 @@ const Menu = ({ onStartGame, onOnlineMode, onHistory, onSettings, onSwitchUser, 
             zIndex: 9999
           }}
         >
-          <div
-            className="settings-menu-item"
-            onClick={onToggleStealth}
-          >
+          <div className="settings-menu-item" onClick={onToggleStealth}>
             <span className="settings-menu-icon">{stealthMode ? '🐟' : '👔'}</span>
             <span className="settings-menu-label">摸鱼模式</span>
             <span className={`settings-menu-toggle ${stealthMode ? 'active' : ''}`}>
               {stealthMode ? 'ON' : 'OFF'}
             </span>
           </div>
-          <div
-            className="settings-menu-item"
-            onClick={onToggleSound}
-          >
+          <div className="settings-menu-item" onClick={onToggleSound}>
             <span className="settings-menu-icon">{soundEnabled ? '🔊' : '🔇'}</span>
             <span className="settings-menu-label">音效</span>
             <span className={`settings-menu-toggle ${soundEnabled ? 'active' : ''}`}>
@@ -121,28 +110,17 @@ const Menu = ({ onStartGame, onOnlineMode, onHistory, onSettings, onSwitchUser, 
               </div>
             ))}
           </div>
-          <div className="fun-mode-group">
-            <label className="fun-mode-label">
-              <input
-                type="checkbox"
-                checked={funMode}
-                onChange={e => setFunMode(e.target.checked)}
-                style={{ marginTop: '2px' }}
-              />
-              <span className="fun-mode-text">
-                <span>🎪 娱乐模式</span>
-                <span className="fun-mode-hint">每局获得随机道具，可换牌、偷看、护甲等</span>
-              </span>
-            </label>
-          </div>
         </div>
 
         <div className="menu-buttons">
-          <button className="btn btn-primary btn-large" onClick={() => onStartGame(playerCount, funMode)}>
+          <button className="btn btn-primary btn-large" onClick={() => onStartGame(playerCount, false)}>
             🎮 单机游戏
           </button>
           <button className="btn btn-primary btn-large" onClick={onOnlineMode}>
             🌐 联机对战
+          </button>
+          <button className="btn btn-fun btn-large" onClick={onFunMode}>
+            🎪 娱乐模式
           </button>
           <button className="btn btn-large" onClick={onHistory}>
             历史对局

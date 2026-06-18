@@ -1814,3 +1814,615 @@ body {
   background: #ffffff;
   color: #000000;
 }
+
+/* ===== 娱乐模式大厅 ===== */
+.fun-lobby-page {
+  position: relative;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.fun-lobby-header {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 600px;
+  padding: 16px 20px 0;
+}
+
+.fun-lobby-back {
+  font-size: 1.2rem;
+  width: 44px;
+  height: 44px;
+}
+
+.fun-lobby-title {
+  font-size: 1.6rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  background: var(--gradient-rainbow);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.fun-lobby-content {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  max-width: 600px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.fun-lobby-subtitle {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  letter-spacing: 1px;
+}
+
+.fun-game-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+}
+
+.fun-game-card {
+  background: rgba(20, 10, 40, 0.85);
+  border: 2px solid var(--border-dim);
+  border-radius: 16px;
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.fun-game-card:hover {
+  border-color: var(--game-color, var(--neon-purple));
+  box-shadow: 0 0 16px var(--game-glow, rgba(182,56,255,0.4));
+  transform: translateY(-2px);
+}
+
+.fun-game-card.selected {
+  border-color: var(--game-color, var(--neon-purple));
+  background: rgba(30, 15, 55, 0.95);
+  box-shadow: 0 0 24px var(--game-glow, rgba(182,56,255,0.5));
+}
+
+.fun-game-emoji {
+  font-size: 2.8rem;
+  flex-shrink: 0;
+}
+
+.fun-game-info {
+  flex: 1;
+}
+
+.fun-game-name {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--game-color, #fff);
+  margin-bottom: 2px;
+}
+
+.fun-game-subtitle {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.fun-game-desc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.fun-game-check {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--game-color, var(--neon-purple));
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 900;
+}
+
+.fun-lobby-options {
+  width: 100%;
+  background: rgba(20, 10, 40, 0.7);
+  border: 1px solid var(--border-dim);
+  border-radius: 14px;
+  padding: 16px 20px;
+  animation: shopModalIn 0.2s ease;
+}
+
+.fun-lobby-section-title {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.fun-lobby-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.fun-lobby-actions .btn {
+  flex: 1;
+}
+
+/* 主菜单娱乐模式按钮 */
+.btn-fun {
+  background: var(--gradient-rainbow);
+  color: #fff;
+  font-weight: 800;
+  border: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-fun::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.08);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.btn-fun:hover::before { opacity: 1; }
+
+/* ===== 斗牛游戏页面 ===== */
+.niu-game-page {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(ellipse at center, #1a0a2e 0%, #0a0014 100%);
+  overflow: hidden;
+}
+
+.niu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(0,0,0,0.4);
+  border-bottom: 1px solid var(--border-dim);
+  flex-shrink: 0;
+}
+
+.niu-title {
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: #ff6b35;
+  text-shadow: 0 0 12px rgba(255,107,53,0.7);
+  letter-spacing: 2px;
+}
+
+.niu-round {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  background: rgba(255,255,255,0.08);
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.niu-table {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 12px;
+  padding: 14px;
+  overflow-y: auto;
+}
+
+.niu-seat {
+  background: rgba(20, 10, 40, 0.75);
+  border: 1px solid var(--border-dim);
+  border-radius: 14px;
+  padding: 12px 14px;
+  flex: 1 1 calc(50% - 6px);
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  transition: border-color 0.2s;
+}
+
+.niu-seat.banker {
+  border-color: #ff6b35;
+  box-shadow: 0 0 14px rgba(255,107,53,0.35);
+}
+
+.niu-seat.human {
+  border-color: var(--neon-gold);
+  box-shadow: 0 0 14px rgba(255,214,10,0.25);
+}
+
+.niu-player-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.niu-avatar { font-size: 1.4rem; }
+
+.niu-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff;
+  flex: 1;
+}
+
+.niu-banker-badge {
+  background: #ff6b35;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 900;
+  padding: 2px 7px;
+  border-radius: 8px;
+}
+
+.niu-chips {
+  font-size: 0.85rem;
+  color: var(--neon-gold);
+  font-weight: 700;
+  margin-left: auto;
+}
+
+.niu-hand {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.niu-card {
+  width: 38px;
+  height: 54px;
+  border-radius: 6px;
+  background: #1a1a2e;
+  border: 1px solid rgba(255,255,255,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  transition: transform 0.3s ease;
+}
+
+.niu-card.face-down {
+  background: #1a1a2e;
+}
+
+.niu-card.revealed {
+  background: #f8f9fa;
+  border-color: rgba(0,0,0,0.2);
+  animation: niuCardReveal 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+
+@keyframes niuCardReveal {
+  from { transform: rotateY(90deg) scale(0.8); opacity: 0; }
+  to   { transform: rotateY(0deg) scale(1); opacity: 1; }
+}
+
+.niu-card-value {
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.niu-card-back {
+  font-size: 1.2rem;
+  opacity: 0.5;
+}
+
+.niu-hand-name {
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-align: center;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.08);
+  color: var(--text-primary);
+}
+
+.niu-rank-11 { color: #06ffa5; background: rgba(6,255,165,0.15); }  /* 五小牛 */
+.niu-rank-12 { color: var(--neon-cyan); background: rgba(0,245,255,0.15); } /* 炸弹 */
+.niu-rank-13 { color: var(--neon-gold); background: rgba(255,214,10,0.15); } /* 五花牛 */
+.niu-rank-10 { color: #ff6b35; background: rgba(255,107,53,0.15); } /* 老牛 */
+.niu-rank-9  { color: #a78bfa; }
+
+.niu-change {
+  font-size: 1rem;
+  font-weight: 900;
+  text-align: center;
+  animation: niuChangeFloat 0.5s ease both;
+}
+
+.niu-change.win  { color: #06ffa5; text-shadow: 0 0 10px rgba(6,255,165,0.6); }
+.niu-change.lose { color: #ff4757; text-shadow: 0 0 10px rgba(255,71,87,0.6); }
+
+@keyframes niuChangeFloat {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.niu-bet-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-align: right;
+}
+
+.niu-msg {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  background: rgba(0,0,0,0.4);
+  text-align: center;
+  border-top: 1px solid var(--border-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.niu-controls {
+  flex-shrink: 0;
+  padding: 12px 16px;
+  background: rgba(0,0,0,0.5);
+  border-top: 1px solid var(--border-dim);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.niu-bet-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.niu-bet-title {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
+}
+
+.niu-bet-options {
+  display: flex;
+  gap: 8px;
+}
+
+.niu-bet-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border-dim);
+  background: rgba(255,255,255,0.06);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.niu-bet-btn:hover:not(:disabled), .niu-bet-btn.selected {
+  border-color: #ff6b35;
+  background: rgba(255,107,53,0.15);
+  color: #ff6b35;
+}
+
+.niu-bet-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.niu-gameover {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+.niu-gameover-title {
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--neon-gold);
+}
+
+.niu-gameover-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* 隐身模式覆盖 */
+.stealth-mode .fun-lobby-title { background: none; -webkit-text-fill-color: #000; color: #000; }
+.stealth-mode .fun-game-card { background: #f8f8f8; border-color: #ccc; }
+.stealth-mode .fun-game-card.selected { background: #eee; border-color: #333; box-shadow: none; }
+.stealth-mode .fun-game-name { color: #333; }
+.stealth-mode .btn-fun { background: #333; color: #fff; }
+.stealth-mode .niu-game-page { background: #fff; }
+.stealth-mode .niu-seat { background: #f4f4f4; border-color: #ccc; box-shadow: none; }
+.stealth-mode .niu-seat.banker { border-color: #333; }
+.stealth-mode .niu-card.revealed { background: #fff; }
+
+@media (max-width: 480px) {
+  .niu-seat { flex: 1 1 100%; }
+  .fun-lobby-actions { flex-direction: column; }
+}
+
+/* ===== 斗牛：新增特效与图标样式 ===== */
+
+/* 特殊牌型全屏特效 */
+.niu-special-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, rgba(255,214,10,0.25) 0%, rgba(0,0,0,0.7) 100%);
+  animation: niuSpecialIn 0.3s ease both, niuSpecialOut 0.4s ease 1.6s both;
+  pointer-events: none;
+}
+
+@keyframes niuSpecialIn {
+  from { opacity: 0; transform: scale(0.7); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes niuSpecialOut {
+  to { opacity: 0; transform: scale(1.15); }
+}
+
+.niu-special-flash-icon {
+  width: 100px;
+  height: 100px;
+  animation: niuSpecialPulse 0.6s ease infinite alternate;
+  filter: drop-shadow(0 0 20px #ffd60a);
+}
+
+@keyframes niuSpecialPulse {
+  from { transform: scale(1) rotate(-5deg); }
+  to   { transform: scale(1.1) rotate(5deg); }
+}
+
+.niu-special-flash-name {
+  font-size: 2.4rem;
+  font-weight: 900;
+  color: #ffd60a;
+  text-shadow: 0 0 30px rgba(255,214,10,0.9), 0 0 60px rgba(255,107,53,0.6);
+  margin-top: 16px;
+  letter-spacing: 4px;
+  animation: niuNameBounce 0.4s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+@keyframes niuNameBounce {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+/* 庄家变更提示 */
+.niu-banker-flash {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 8000;
+  background: rgba(255,107,53,0.9);
+  border-radius: 40px;
+  padding: 10px 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(255,107,53,0.5);
+  animation: niuBankerIn 0.3s cubic-bezier(0.34,1.56,0.64,1) both,
+             niuBankerOut 0.3s ease 0.9s both;
+  pointer-events: none;
+}
+
+@keyframes niuBankerIn  { from { opacity: 0; top: 50px; } to { opacity: 1; top: 80px; } }
+@keyframes niuBankerOut { to   { opacity: 0; top: 50px; } }
+
+.niu-banker-flash-icon {
+  width: 28px;
+  height: 28px;
+}
+
+/* 标题 logo */
+.niu-title-logo {
+  width: 26px;
+  height: 26px;
+  vertical-align: middle;
+  margin-right: 6px;
+  filter: drop-shadow(0 0 6px rgba(255,107,53,0.8));
+}
+
+/* 牌型图标 */
+.niu-hand-icon {
+  width: 20px;
+  height: 20px;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+/* 倍数标签 */
+.niu-multiplier {
+  color: #ffd60a;
+  font-size: 0.85em;
+  margin-left: 2px;
+}
+
+/* 胜负光晕 */
+.niu-seat.win-glow {
+  border-color: #06ffa5;
+  box-shadow: 0 0 18px rgba(6,255,165,0.45);
+  animation: niuWinPulse 0.6s ease;
+}
+
+.niu-seat.lose-glow {
+  border-color: #ff4757;
+  box-shadow: 0 0 18px rgba(255,71,87,0.35);
+}
+
+@keyframes niuWinPulse {
+  0%, 100% { box-shadow: 0 0 18px rgba(6,255,165,0.45); }
+  50% { box-shadow: 0 0 35px rgba(6,255,165,0.8); }
+}
+
+/* 占位牌 */
+.niu-card-placeholder {
+  background: rgba(255,255,255,0.04);
+  border: 1px dashed rgba(255,255,255,0.12);
+}
+
+/* 平局变化 */
+.niu-change.draw { color: #aaa; }
+
+/* 翻牌提示 */
+.niu-dealing-hint {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  letter-spacing: 2px;
+  animation: niuDotBlink 1s ease infinite;
+}
+
+@keyframes niuDotBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* 隐身模式补充 */
+.stealth-mode .niu-special-flash { background: rgba(255,255,255,0.9); }
+.stealth-mode .niu-special-flash-name { color: #333; text-shadow: none; }
+.stealth-mode .niu-banker-flash { background: #333; }

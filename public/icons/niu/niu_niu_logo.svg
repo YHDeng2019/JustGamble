@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- 牛头轮廓 -->
+  <circle cx="32" cy="34" r="18" fill="#8B4513" stroke="#5C2D0A" stroke-width="1.5"/>
+  <!-- 牛鼻子 -->
+  <ellipse cx="32" cy="44" rx="9" ry="6" fill="#C0724A"/>
+  <!-- 鼻孔 -->
+  <circle cx="29" cy="44" r="2" fill="#7A3A1E"/>
+  <circle cx="35" cy="44" r="2" fill="#7A3A1E"/>
+  <!-- 眼睛 -->
+  <circle cx="25" cy="30" r="3.5" fill="white"/>
+  <circle cx="39" cy="30" r="3.5" fill="white"/>
+  <circle cx="25.5" cy="30" r="2" fill="#222"/>
+  <circle cx="39.5" cy="30" r="2" fill="#222"/>
+  <!-- 高光 -->
+  <circle cx="26" cy="29" r="0.8" fill="white"/>
+  <circle cx="40" cy="29" r="0.8" fill="white"/>
+  <!-- 牛角 -->
+  <path d="M20 22 Q12 10 16 6 Q20 14 24 20Z" fill="#6B3A1F" stroke="#4A2810" stroke-width="1"/>
+  <path d="M44 22 Q52 10 48 6 Q44 14 40 20Z" fill="#6B3A1F" stroke="#4A2810" stroke-width="1"/>
+  <!-- 耳朵 -->
+  <ellipse cx="16" cy="28" rx="5" ry="7" fill="#8B4513" stroke="#5C2D0A" stroke-width="1" transform="rotate(-15,16,28)"/>
+  <ellipse cx="16" cy="28" rx="3" ry="5" fill="#C0724A" transform="rotate(-15,16,28)"/>
+  <ellipse cx="48" cy="28" rx="5" ry="7" fill="#8B4513" stroke="#5C2D0A" stroke-width="1" transform="rotate(15,48,28)"/>
+  <ellipse cx="48" cy="28" rx="3" ry="5" fill="#C0724A" transform="rotate(15,48,28)"/>
+  <!-- 底部文字背景 -->
+  <rect x="14" y="54" width="36" height="10" rx="5" fill="#ff6b35" opacity="0.9"/>
+  <text x="32" y="62" font-family="sans-serif" font-size="7" font-weight="bold" fill="white" text-anchor="middle">斗 牛</text>
+</svg>

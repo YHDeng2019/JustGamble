@@ -3,6 +3,8 @@ import { getSessionUser, logoutSession } from './auth/session';
 import SelectUser from './pages/SelectUser';
 import Menu from './pages/Menu';
 import Game from './pages/Game';
+import FunLobby from './pages/FunLobby';
+import NiuNiuGame from './pages/NiuNiuGame';
 import History from './pages/History';
 import Settings from './pages/Settings';
 import OnlineLobby from './pages/OnlineLobby';
@@ -16,6 +18,8 @@ const PAGES = {
   SELECT_USER: 'select_user',
   MENU: 'menu',
   GAME: 'game',
+  FUN_LOBBY: 'fun_lobby',
+  NIU_NIU: 'niu_niu',
   HISTORY: 'history',
   SETTINGS: 'settings',
   ONLINE_LOBBY: 'online_lobby',
@@ -89,6 +93,15 @@ function App() {
     setCurrentPage(PAGES.ONLINE_LOBBY);
   };
 
+  const handleFunMode = () => {
+    setCurrentPage(PAGES.FUN_LOBBY);
+  };
+
+  const handleStartNiuNiu = (count) => {
+    setPlayerCount(count);
+    setCurrentPage(PAGES.NIU_NIU);
+  };
+
   const handleRoomJoined = (roomId) => {
     setCurrentRoomId(roomId);
     setCurrentPage(PAGES.ONLINE_WAITING);
@@ -119,6 +132,7 @@ function App() {
           <Menu
             onStartGame={handleStartGame}
             onOnlineMode={handleOnlineMode}
+            onFunMode={handleFunMode}
             onHistory={() => setCurrentPage(PAGES.HISTORY)}
             onSettings={() => setCurrentPage(PAGES.SETTINGS)}
             onSwitchUser={handleLogout}
@@ -126,6 +140,25 @@ function App() {
             onToggleStealth={() => setStealthMode(!stealthMode)}
             soundEnabled={soundEnabled}
             onToggleSound={handleToggleSound}
+          />
+        );
+      case PAGES.FUN_LOBBY:
+        return (
+          <FunLobby
+            onBack={() => setCurrentPage(PAGES.MENU)}
+            onStartTexas={(count) => handleStartGame(count, true)}
+            onOnlineTexas={handleOnlineMode}
+            onStartNiuNiu={handleStartNiuNiu}
+            stealthMode={stealthMode}
+          />
+        );
+      case PAGES.NIU_NIU:
+        return (
+          <NiuNiuGame
+            playerCount={playerCount}
+            onBack={() => setCurrentPage(PAGES.FUN_LOBBY)}
+            stealthMode={stealthMode}
+            soundEnabled={soundEnabled}
           />
         );
       case PAGES.GAME:
