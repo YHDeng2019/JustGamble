@@ -170,8 +170,8 @@ const OnlineLobby = ({ user, gameType = 'texas', funMode: initialFunMode = false
             </label>
           </div>
 
-          {/* 德州扑克专属设置 */}
-          {gameType !== 'niuniu' && (
+          {/* 德州扑克专属设置：从「疯狂德州」入口进入时本身已是娱乐模式，不再展示开关 */}
+          {gameType !== 'niuniu' && !initialFunMode && (
             <div className="form-group fun-mode-group">
               <label className="fun-mode-label">
                 <input

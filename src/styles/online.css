@@ -156,6 +156,13 @@
   font-size: 0.85rem;
   padding: 0.4rem 0.8rem;
   transition: all 0.3s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.room-header > .btn {
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .room-title .copy-btn.copied {
@@ -168,6 +175,8 @@
   padding: 0.25rem 0.75rem;
   border-radius: 20px;
   font-size: 0.9rem;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .room-content {
@@ -409,6 +418,37 @@
 
   .room-actions {
     flex-direction: column;
+  }
+
+  /* 手机端房间头部：缩小标题与按钮，避免"复制/房主/离开"文字换行 */
+  .room-header {
+    gap: 0.5rem;
+    margin-bottom: 1.2rem;
+    flex-wrap: nowrap;
+  }
+  .room-title {
+    gap: 0.5rem;
+    min-width: 0;
+    flex-wrap: nowrap;
+  }
+  .room-title h1 {
+    font-size: 1.05rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+  .room-title .copy-btn {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.6rem;
+  }
+  .host-badge {
+    font-size: 0.72rem;
+    padding: 0.2rem 0.5rem;
+  }
+  .room-header > .btn {
+    font-size: 0.78rem;
+    padding: 0.4rem 0.7rem;
   }
 }
 

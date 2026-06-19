@@ -554,6 +554,8 @@ export class OnlineGameEngine {
       }
 
       console.log('[联机引擎] 道具已使用:', itemId, 'by', userId);
+      // 房主自身使用道具时，写入会被自己的监听器按序列号跳过，需显式刷新 UI
+      this._emitVisibleState();
 
     } else if (action.action === 'refresh_item') {
       const refreshCount = playerItem.refreshCount || 0;
@@ -593,6 +595,7 @@ export class OnlineGameEngine {
       });
 
       console.log('[联机引擎] 道具已刷新:', newItem, 'cost:', cost, 'for', userId);
+      this._emitVisibleState();
     }
 
     if (actionRef) await remove(actionRef);
@@ -723,6 +726,17 @@ export class OnlineGameEngine {
       playerItems: this._playerItems || null,
       shopPhase: this._shopPhase || null
     };
+  }
+
+  /**
+   * 主动把当前可见状态推给 React（房主自己触发的写入会因序列号去重被监听器跳过，
+   * 不会回调刷新 UI，需在此显式刷新一次）
+   */
+  _emitVisibleState() {
+    const visible = this.getVisibleState();
+    this.stateChangeCallbacks.forEach(cb => {
+      try { cb(visible); } catch (e) { console.error('[联机引擎] 状态回调失败:', e); }
+    });
   }
 
   /**
