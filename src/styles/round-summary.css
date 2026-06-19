@@ -151,15 +151,21 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  min-width: 0;
 }
 
 .player-avatar-small {
   font-size: 1.5rem;
+  flex-shrink: 0;
 }
 
 .player-name-small {
   font-weight: 600;
   color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .winner-icon {
@@ -558,4 +564,19 @@
     height: 56px;
     font-size: 1.2rem;
   }
+
+  /* 手机端：给玩家列更多空间，缩小头像，让用户名单行显示不逐字换行 */
+  .summary-table-header,
+  .summary-table-row {
+    grid-template-columns: 2.4fr 1fr 1fr 3fr;
+    gap: 0.35rem;
+    padding: 0.6rem 0.6rem;
+    font-size: 0.82rem;
+  }
+  .summary-table-header:has(.col-item-cost),
+  .summary-table-row:has(.col-item-cost) {
+    grid-template-columns: 2.4fr 0.9fr 1fr 1fr 2.4fr;
+  }
+  .player-avatar-small { font-size: 1.15rem; }
+  .player-name-small { font-size: 0.8rem; }
 }

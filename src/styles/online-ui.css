@@ -1375,6 +1375,24 @@
   .shop-item-card-icon { width: 32px; height: 32px; }
   .shop-item-card-name { font-size: 0.78rem; }
   .shop-item-card-desc { font-size: 0.65rem; }
+
+  /* 道具操作栏：手机端撑满可用宽度，避免在居中列里被压成逐字竖排 */
+  .item-action-bar {
+    width: 92vw;
+    max-width: 92vw;
+    box-sizing: border-box;
+    gap: 8px;
+    padding: 8px 12px;
+  }
+  .item-action-icon { width: 26px; height: 26px; }
+  .item-action-name { font-size: 0.8rem; }
+  .item-action-desc {
+    font-size: 0.68rem;
+    line-height: 1.25;
+    word-break: normal;
+    overflow-wrap: anywhere;
+  }
+  .item-action-use-btn { padding: 6px 12px; flex-shrink: 0; }
 }
 
 /* 道具使用全屏戏剧效果（全局道具专用） */

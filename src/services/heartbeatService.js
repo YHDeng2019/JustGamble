@@ -5,18 +5,18 @@ let heartbeatInterval = null;
 /**
  * 开始心跳检测
  */
-export const startHeartbeat = (roomId, userId) => {
+export const startHeartbeat = (roomId, userId, identity = null) => {
   // 清除旧的心跳
   stopHeartbeat();
 
   // 立即发送一次
-  updateHeartbeat(roomId, userId).catch(err => {
+  updateHeartbeat(roomId, userId, identity).catch(err => {
     console.error('[心跳] 更新失败:', err);
   });
 
   // 每5秒发送一次心跳
   heartbeatInterval = setInterval(() => {
-    updateHeartbeat(roomId, userId).catch(err => {
+    updateHeartbeat(roomId, userId, identity).catch(err => {
       console.error('[心跳] 更新失败:', err);
     });
   }, 5000);

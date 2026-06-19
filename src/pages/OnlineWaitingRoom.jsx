@@ -11,7 +11,10 @@ const OnlineWaitingRoom = ({ roomId, user, onGameStart, onBack }) => {
   const [copied, setCopied] = useState(false);
 
   const isHost = room?.hostId === user.userId;
-  const players = room?.players ? Object.values(room.players) : [];
+  // 用 entries 把节点 key 作为权威 userId 注入，避免幽灵节点缺 userId 字段
+  const players = room?.players
+    ? Object.entries(room.players).map(([id, p]) => ({ ...p, userId: p.userId || id }))
+    : [];
   const maxPlayers = room?.settings.maxPlayers || 4;
   const allReady = players.length >= 2 && players.length === maxPlayers && players.every(p => p.isReady);
   const isFull = players.length >= maxPlayers;
@@ -43,8 +46,13 @@ const OnlineWaitingRoom = ({ roomId, user, onGameStart, onBack }) => {
       }
     });
 
-    // 启动心跳
-    startHeartbeat(roomId, user.userId);
+    // 启动心跳（携带完整身份，避免瞬断重连后重建出无头像/无法准备的幽灵节点）
+    startHeartbeat(roomId, user.userId, {
+      userId: user.userId,
+      displayName: user.displayName,
+      avatar: user.avatar,
+      chips: room?.settings?.initialChips || 1000
+    });
 
     // 注册断线自动清理：关闭浏览器/断网时Firebase服务器自动移除该玩家
     setupDisconnectCleanup(roomId, user.userId);
@@ -134,7 +142,11 @@ const OnlineWaitingRoom = ({ roomId, user, onGameStart, onBack }) => {
   };
 
   const handleKickPlayer = async (targetUserId, targetName) => {
-    if (!confirm(`确定要踢出玩家 ${targetName} 吗？`)) {
+    if (!targetUserId) {
+      setError('无法踢出该玩家：缺少玩家ID');
+      return;
+    }
+    if (!confirm(`确定要踢出玩家 ${targetName || '该玩家'} 吗？`)) {
       return;
     }
 
@@ -217,7 +229,7 @@ const OnlineWaitingRoom = ({ roomId, user, onGameStart, onBack }) => {
                 <div className="player-avatar"><Avatar avatar={player.avatar} size="lg" /></div>
                 <div className="player-info">
                   <div className="player-name">
-                    {player.displayName}
+                    {player.displayName || '（连接中…）'}
                     {player.isBot && <span className="bot-badge">🤖</span>}
                     {player.userId === room.hostId && <span className="host-icon">👑</span>}
                   </div>

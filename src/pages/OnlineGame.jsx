@@ -219,7 +219,12 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
           setConnectionStatus('connected');
         });
 
-        startHeartbeat(roomId, user.userId);
+        startHeartbeat(roomId, user.userId, {
+          userId: user.userId,
+          displayName: user.displayName,
+          avatar: user.avatar,
+          chips: roomData?.settings?.initialChips || 1000
+        });
 
         // 订阅房间表情
         const unsubscribeEmojis = subscribeToEmojis(roomId, (emoji) => {

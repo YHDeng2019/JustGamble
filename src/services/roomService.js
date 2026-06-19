@@ -368,9 +368,30 @@ export const subscribeToPublicRooms = (callback) => {
 /**
  * 更新心跳
  */
-export const updateHeartbeat = async (roomId, userId) => {
+export const updateHeartbeat = async (roomId, userId, identity = null) => {
   const db = getFirebaseDB();
-  await update(ref(db, `rooms/${roomId}/players/${userId}`), {
+  const playerRef = ref(db, `rooms/${roomId}/players/${userId}`);
+  // 若该玩家节点已被 onDisconnect 移除（断线瞬断后重连），update 会重建出
+  // 只有 {lastHeartbeat,isOnline} 的「幽灵节点」——缺 displayName/avatar/isReady，
+  // 导致无头像、无法准备、踢出显示 undefined。因此先探测节点是否存在。
+  const snap = await get(playerRef);
+  if (!snap.exists()) {
+    // 节点不存在：仅在拿到完整身份时重建，否则跳过（避免造幽灵节点）
+    if (identity && identity.userId && identity.displayName) {
+      await set(playerRef, {
+        userId: identity.userId,
+        displayName: identity.displayName,
+        avatar: identity.avatar || '😀',
+        chips: identity.chips || 1000,
+        isReady: false,
+        isOnline: true,
+        isBot: false,
+        lastHeartbeat: Date.now()
+      });
+    }
+    return;
+  }
+  await update(playerRef, {
     lastHeartbeat: Date.now(),
     isOnline: true
   });
