@@ -2711,8 +2711,8 @@ body {
   border: 1.5px solid rgba(255,255,255,0.12);
   border-radius: 12px;
   padding: 8px 10px;
-  min-width: 120px;
-  max-width: 200px;
+  width: 230px;
+  max-width: 230px;
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -2786,17 +2786,29 @@ body {
   flex-shrink: 0;
 }
 
-/* 扑克牌手牌 — 使用 Card 组件（card-mini 尺寸 42×60） */
+/* 扑克牌手牌 — 5 张牌需在座位内完整展示，不重叠 */
 .niu2-hand {
   display: flex;
-  gap: 2px;
+  gap: 3px;
   justify-content: center;
   flex-wrap: nowrap;
+  width: 100%;
 }
 
 .niu2-card-wrapper {
   animation: niuCardReveal 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
-  flex-shrink: 0;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 40px;
+  display: flex;
+  justify-content: center;
+}
+
+/* 牛牛座位内的牌随座位宽度自适应缩放，始终 5 张并排不重叠 */
+.niu2-hand .card.card-mini {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 42 / 60;
 }
 
 /* 牌型名称 */
@@ -2857,9 +2869,20 @@ body {
 .stealth-mode .niu2-controls { background: #f0f0f0; border-color: #ccc; }
 
 @media (max-width: 480px) {
-  .niu2-felt { width: 88%; min-height: 55px; }
-  .niu2-seat { min-width: 115px; max-width: 150px; padding: 8px 9px; }
-  .niu2-card { width: 26px; height: 38px; }
+  .niu2-felt { width: 88%; min-height: 50px; }
+  /* 手机端：闲家座位两列布局，每座位约半屏宽，5 张牌并排展示不重叠 */
+  .niu2-players-row { gap: 8px; }
+  .niu2-players-row .niu2-seat {
+    width: calc(50% - 4px);
+    max-width: calc(50% - 4px);
+    padding: 7px 8px;
+  }
+  /* 庄家座位居中整宽 */
+  .niu2-banker-row .niu2-seat {
+    width: 70%;
+    max-width: 70%;
+  }
+  .niu2-card-wrapper { max-width: 48px; }
 }
 
 /* ===== 斗牛 v2 补充样式 ===== */
@@ -2880,6 +2903,74 @@ body {
   font-weight: 700;
   text-align: center;
 }
+
+/* 底池：醒目的筹码堆 + 金色发光数字 */
+.niu2-pot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 16px 5px 10px;
+  background: radial-gradient(ellipse at center, rgba(255,214,10,0.22), rgba(255,140,0,0.12));
+  border: 1.5px solid rgba(255,214,10,0.55);
+  border-radius: 999px;
+  box-shadow: 0 0 18px rgba(255,214,10,0.35), inset 0 0 10px rgba(255,214,10,0.15);
+  animation: niuPotPop 0.45s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+.niu2-pot-chips {
+  position: relative;
+  width: 30px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.niu2-pot-chip {
+  position: absolute;
+  left: 50%;
+  width: 22px;
+  height: 22px;
+  margin-left: -11px;
+  border-radius: 50%;
+  border: 2px dashed rgba(255,255,255,0.7);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.4);
+}
+.niu2-pot-chip-1 { top: 0;  background: radial-gradient(circle at 35% 30%, #ffe066, #f5a623); }
+.niu2-pot-chip-2 { top: 4px; background: radial-gradient(circle at 35% 30%, #ff8a5c, #e8590c); }
+.niu2-pot-chip-3 { top: 8px; background: radial-gradient(circle at 35% 30%, #74c0fc, #1c7ed6); }
+
+.niu2-pot-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1;
+}
+.niu2-pot-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.7);
+  letter-spacing: 1px;
+}
+.niu2-pot-amount {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: #ffd60a;
+  text-shadow: 0 0 10px rgba(255,214,10,0.8), 0 1px 2px rgba(0,0,0,0.5);
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes niuPotPop {
+  0%   { transform: scale(0.6); opacity: 0; }
+  60%  { transform: scale(1.12); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.stealth-mode .niu2-pot {
+  background: #f5f5f5;
+  border-color: #999;
+  box-shadow: none;
+}
+.stealth-mode .niu2-pot-amount { color: #000; text-shadow: none; }
+.stealth-mode .niu2-pot-chip { border-color: #999; background: #ddd !important; }
 
 .niu2-felt-rounds {
   font-size: 0.65rem;

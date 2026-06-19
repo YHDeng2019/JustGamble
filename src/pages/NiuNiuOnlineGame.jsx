@@ -236,9 +236,23 @@ const NiuNiuOnlineGame = ({ roomId, user, onExit, stealthMode, soundEnabled }) =
         </div>
 
         <div className="niu2-felt">
-          <div className="niu2-felt-pool">
-            {gameState.pool > 0 ? `💰 底池 ${gameState.pool}` : gameState.tableMsg || (phase === 'idle' ? '等待发牌' : '')}
-          </div>
+          {gameState.pool > 0 ? (
+            <div className="niu2-pot" key={gameState.pool}>
+              <div className="niu2-pot-chips">
+                <span className="niu2-pot-chip niu2-pot-chip-3" />
+                <span className="niu2-pot-chip niu2-pot-chip-2" />
+                <span className="niu2-pot-chip niu2-pot-chip-1" />
+              </div>
+              <div className="niu2-pot-text">
+                <span className="niu2-pot-label">底池</span>
+                <span className="niu2-pot-amount">{gameState.pool}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="niu2-felt-pool">
+              {gameState.tableMsg || (phase === 'idle' ? '等待发牌' : '')}
+            </div>
+          )}
           {gameState.bankerRounds > 0 && (
             <div className="niu2-felt-rounds">庄家已连庄 {gameState.bankerRounds} 局</div>
           )}

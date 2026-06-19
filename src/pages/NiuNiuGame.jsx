@@ -409,9 +409,23 @@ const NiuNiuGame = ({ playerCount, onBack, stealthMode, soundEnabled }) => {
         </div>
 
         <div className="niu2-felt">
-          <div className="niu2-felt-pool">
-            {pool > 0 ? `💰 底池 ${pool}` : tableMsg || (phase === PHASE.IDLE ? '等待发牌' : '')}
-          </div>
+          {pool > 0 ? (
+            <div className="niu2-pot" key={pool}>
+              <div className="niu2-pot-chips">
+                <span className="niu2-pot-chip niu2-pot-chip-3" />
+                <span className="niu2-pot-chip niu2-pot-chip-2" />
+                <span className="niu2-pot-chip niu2-pot-chip-1" />
+              </div>
+              <div className="niu2-pot-text">
+                <span className="niu2-pot-label">底池</span>
+                <span className="niu2-pot-amount">{pool}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="niu2-felt-pool">
+              {tableMsg || (phase === PHASE.IDLE ? '等待发牌' : '')}
+            </div>
+          )}
           {bankerRounds > 0 && (
             <div className="niu2-felt-rounds">庄 {bankerRounds} 局</div>
           )}
