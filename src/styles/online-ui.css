@@ -1148,7 +1148,27 @@
   display: flex;
   gap: 10px;
   justify-content: center;
+  min-height: 44px;
+  align-items: center;
 }
+
+/* 购买/跳过后的乐观反馈（等待网络往返同步时显示） */
+.shop-decision-hint {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #c084fc;
+  text-align: center;
+  padding: 10px 16px;
+  animation: shopDecisionPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes shopDecisionPulse {
+  0%, 100% { opacity: 0.6; }
+  50%      { opacity: 1; }
+}
+
+.stealth-mode .shop-decision-hint { color: #333; }
+
 
 .shop-buy-btn {
   padding: 10px 28px;

@@ -67,6 +67,7 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
   const [shopCountdown, setShopCountdown] = useState(10);
   const [shopRefreshing, setShopRefreshing] = useState(false);
   const [shopRefreshCount, setShopRefreshCount] = useState(0);
+  const [shopDecision, setShopDecision] = useState(null); // 乐观反馈：'buying' | 'skipped' | null
   const shopIntervalRef = useRef(null);
   const shopWasActiveRef = useRef(false);
 
@@ -463,8 +464,11 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
   useEffect(() => {
     const shopPhase = gameState?.shopPhase;
     if (shopPhase?.active && shopPhase?.startsAt) {
-      // 新商店阶段开启：重置刷新次数（费用从首档重新计）
-      if (!shopWasActiveRef.current) setShopRefreshCount(0);
+      // 新商店阶段开启：重置刷新次数（费用从首档重新计）+ 清除上一局的乐观决定
+      if (!shopWasActiveRef.current) {
+        setShopRefreshCount(0);
+        setShopDecision(null);
+      }
       shopWasActiveRef.current = true;
       const elapsed = Date.now() - shopPhase.startsAt;
       const remaining = Math.max(0, Math.ceil((shopPhase.durationMs - elapsed) / 1000));
@@ -1026,6 +1030,20 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
     engineRef.current?.refreshShopOffers?.().catch(() => {});
   };
 
+  // 购买/跳过：立即给出乐观反馈，避免等待网络往返时按钮像"卡住"
+  const handleBuyShopItem = () => {
+    if (shopDecision || !shopSelected) return;
+    setShopDecision('buying');
+    playSound('chip', !soundEnabled);
+    engineRef.current?.buyShopItem?.(shopSelected)?.catch?.(() => {});
+  };
+
+  const handleSkipShop = () => {
+    if (shopDecision) return;
+    setShopDecision('skipped');
+    engineRef.current?.buyShopItem?.(null)?.catch?.(() => {});
+  };
+
   const handleItemButtonClick = () => {
     const myItem = gameState?.playerItems?.[user.userId];
     if (!myItem || myItem.used || !myItem.item) return;
@@ -1324,35 +1342,43 @@ const OnlineGame = ({ roomId, user, onExit, stealthMode, onToggleStealth, soundE
               })}
             </div>
             <div className="shop-modal-actions">
-              <button
-                className="shop-buy-btn"
-                disabled={!shopSelected}
-                onClick={() => engineRef.current?.buyShopItem(shopSelected)}
-              >
-                购买
-              </button>
-              {(() => {
-                const bb = gameState?.bigBlind || 20;
-                const refreshCost = getRefreshCost(shopRefreshCount, bb);
-                const myChips = gameState?.players?.find(p => p.id === user.userId)?.chips || 0;
-                const cantAffordRefresh = myChips < refreshCost;
-                return (
+              {shopDecision ? (
+                <div className="shop-decision-hint">
+                  {shopDecision === 'buying' ? '✓ 已购买，等待其他玩家…' : '已跳过，等待其他玩家…'}
+                </div>
+              ) : (
+                <>
                   <button
-                    className="shop-refresh-btn"
-                    disabled={shopRefreshing || cantAffordRefresh}
-                    onClick={handleShopRefreshOffers}
-                    title={`花费 ${refreshCost} 筹码重新展示三张道具`}
+                    className="shop-buy-btn"
+                    disabled={!shopSelected}
+                    onClick={handleBuyShopItem}
                   >
-                    🔄 刷新 ({refreshCost})
+                    购买
                   </button>
-                );
-              })()}
-              <button
-                className="shop-skip-btn"
-                onClick={() => engineRef.current?.buyShopItem(null)}
-              >
-                跳过
-              </button>
+                  {(() => {
+                    const bb = gameState?.bigBlind || 20;
+                    const refreshCost = getRefreshCost(shopRefreshCount, bb);
+                    const myChips = gameState?.players?.find(p => p.id === user.userId)?.chips || 0;
+                    const cantAffordRefresh = myChips < refreshCost;
+                    return (
+                      <button
+                        className="shop-refresh-btn"
+                        disabled={shopRefreshing || cantAffordRefresh}
+                        onClick={handleShopRefreshOffers}
+                        title={`花费 ${refreshCost} 筹码重新展示三张道具`}
+                      >
+                        🔄 刷新 ({refreshCost})
+                      </button>
+                    );
+                  })()}
+                  <button
+                    className="shop-skip-btn"
+                    onClick={handleSkipShop}
+                  >
+                    跳过
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
