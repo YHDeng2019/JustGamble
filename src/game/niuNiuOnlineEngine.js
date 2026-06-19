@@ -256,7 +256,20 @@ export class NiuNiuOnlineEngine {
       const pls = s.players;
       const bi  = s.bankerIndex;
       if (action.keep) {
-        const ns = { ...s, bankerRounds: 0, phase: 'idle', changes: null, tableMsg: '', round: s.round + 1 };
+        const ns = {
+          ...s,
+          bankerRounds: 0,
+          phase: 'idle',
+          hands: null,
+          handResults: null,
+          bets: null,
+          changes: null,
+          tableMsg: '',
+          round: s.round + 1,
+          revealOrder: [],
+          revealedCount: 0,
+        };
+        this._pendingBets = {};
         this._state = ns;
         this._write(ns);
       } else {
@@ -264,7 +277,19 @@ export class NiuNiuOnlineEngine {
       }
     } else if (action.type === 'next_round') {
       const s = this._state;
-      const ns = { ...s, phase: 'idle', changes: null, tableMsg: '', round: s.round + 1, revealedCount: 0 };
+      const ns = {
+        ...s,
+        phase: 'idle',
+        hands: null,
+        handResults: null,
+        bets: null,
+        changes: null,
+        tableMsg: '',
+        round: s.round + 1,
+        revealOrder: [],
+        revealedCount: 0,
+      };
+      this._pendingBets = {};
       this._state = ns;
       this._write(ns);
     }

@@ -68,6 +68,7 @@ const NiuNiuOnlineGame = ({ roomId, user, onExit, stealthMode, soundEnabled }) =
   const [gameState, setGameState] = useState(null);
   const [room, setRoom]           = useState(null);
   const [humanBet, setHumanBet]   = useState(BASE_BET);
+  const [humanBetInput, setHumanBetInput] = useState(String(BASE_BET));
   const [error, setError]         = useState('');
   const [specialFlash, setSpecialFlash] = useState(null);
   const engineRef = useRef(null);
@@ -143,12 +144,12 @@ const NiuNiuOnlineGame = ({ roomId, user, onExit, stealthMode, soundEnabled }) =
     onExit();
   };
 
-  const handleBet = (amount) => {
-    setHumanBet(amount);
-  };
-
   const handleConfirmBet = () => {
-    engineRef.current?.pushAction({ type: 'bet', amount: Math.min(humanBet, myPlayer?.chips || humanBet) });
+    const maxChips = myPlayer?.chips || 0;
+    const amount = Math.max(1, Math.min(parseInt(humanBetInput) || humanBet || BASE_BET, maxChips));
+    setHumanBet(amount);
+    setHumanBetInput(String(amount));
+    engineRef.current?.pushAction({ type: 'bet', amount });
   };
 
   const handleBankerDeal = () => {
@@ -191,9 +192,6 @@ const NiuNiuOnlineGame = ({ roomId, user, onExit, stealthMode, soundEnabled }) =
   const bets         = gameState.bets || [];
   const changes      = gameState.changes;
   const revealedCount = gameState.revealedCount || 0;
-
-  const betOptions   = [100, 200, 500].filter(v => v <= (myPlayer?.chips || 0));
-  if (betOptions.length === 0) betOptions.push(Math.min(100, myPlayer?.chips || 100));
 
   // 是否已提交下注
   const myBet = bets[myIdx] || 0;
@@ -284,22 +282,35 @@ const NiuNiuOnlineGame = ({ roomId, user, onExit, stealthMode, soundEnabled }) =
           amBanker ? (
             <div className="niu2-banker-controls">
               <div className="niu2-info-row">你是庄家，本局放入 <strong>{BANKER_ANTE}</strong> 筹码</div>
-              {isHost ? (
-                <button className="btn btn-primary btn-large" onClick={handleBankerDeal}>🐂 发牌</button>
-              ) : (
-                <div className="niu-dealing-hint">等待庄家发牌…</div>
-              )}
+              <button className="btn btn-primary btn-large" onClick={handleBankerDeal}>🐂 发牌</button>
             </div>
           ) : (
             !hasSubmittedBet ? (
               <div className="niu-bet-controls">
-                <div className="niu-bet-title">选择下注</div>
-                <div className="niu-bet-options">
-                  {betOptions.map(v => (
-                    <button key={v} className={`niu-bet-btn${humanBet === v ? ' selected' : ''}`} onClick={() => handleBet(v)}>{v}</button>
-                  ))}
+                <div className="niu-bet-title">你的下注（最多 {myPlayer?.chips || 0}）</div>
+                <div className="niu2-bet-input-row">
+                  <input
+                    type="number"
+                    className="niu2-bet-input"
+                    value={humanBetInput}
+                    min={1}
+                    max={myPlayer?.chips || 0}
+                    onChange={e => setHumanBetInput(e.target.value)}
+                    onBlur={() => {
+                      const maxChips = myPlayer?.chips || 0;
+                      const v = Math.max(1, Math.min(parseInt(humanBetInput) || BASE_BET, maxChips));
+                      setHumanBet(v);
+                      setHumanBetInput(String(v));
+                    }}
+                  />
+                  <div className="niu2-bet-presets">
+                    {[100, 200, 500].filter(v => v <= (myPlayer?.chips || 0)).map(v => (
+                      <button key={v} className={`niu-bet-btn${humanBet === v ? ' selected' : ''}`}
+                        onClick={() => { setHumanBet(v); setHumanBetInput(String(v)); }}>{v}</button>
+                    ))}
+                  </div>
                 </div>
-                <button className="btn btn-primary btn-large" onClick={handleConfirmBet}>确认 {humanBet}</button>
+                <button className="btn btn-primary btn-large" onClick={handleConfirmBet}>确认下注 {humanBet}</button>
               </div>
             ) : (
               <div className="niu-dealing-hint">等待其他玩家下注…</div>
