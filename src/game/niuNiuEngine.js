@@ -1,7 +1,8 @@
 // 斗牛（牛牛）游戏引擎 v2
 // 规则：牛牛（剩两张个位=0）=最高普通牌，启用五花牛/炸弹/五小牛
 // 倍数：没牛~牛六=1x，牛七/八/九=2x，牛牛=3x，五小牛=5x，炸弹=5x，五花牛=5x
-// 结算：底池模式 —— 输家先放入（下注×倍数），赢家按牌面大到小依次从底池取钱
+// 结算：底池模式 —— 底池跨局持久化，输家先放入（下注×倍数），赢家按牌面大到小依次从底池取钱
+// 流庄：底池 < 20 自动流庄，庄家带走剩余底池；满3局可主动转庄并带走底池
 
 const SUITS = ['♠', '♥', '♦', '♣'];
 const VALUES = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
@@ -11,6 +12,7 @@ export const BASE_BET = 100;      // 闲家基础下注
 export const INIT_CHIPS = 1000;
 export const BANKER_MIN_CHIPS = BANKER_ANTE; // 做庄最低筹码要求
 export const BANKER_MAX_ROUNDS = 3;  // 连庄超过这么多局可选择主动转庄
+export const POOL_MIN_TO_CONTINUE = 20; // 底池低于此值触发流庄
 
 // 牌面点数（A=1，J/Q/K=10）
 function cardPoint(value) {
@@ -151,13 +153,15 @@ export function compareHands(a, b) {
  * 底池结算
  *
  * 庄家在当庄首局已从外部扣款入池，这里直接使用传入的 currentPool。
- * 输家先放入，赢家按牌面大→小依次取，剩余归庄。
+ * 底池跨局持久化：本局结算后剩余底池保留，不归庄家。
+ * 输家先放入，赢家按牌面大→小依次取。
  *
  * @param {number}   bankerIndex  - 庄家在 players 数组中的下标
  * @param {object[]} handResults  - evaluateHand 结果数组，与 players 对应
  * @param {number[]} bets         - 每位闲家的下注额（bankerIndex 位置忽略）
  * @param {number[]} chips        - 每位玩家当前筹码
  * @param {number}   currentPool  - 当前底池金额（庄家入池已在外部处理）
+ * @returns {{ changes: number[], poolRemaining: number, settlements: object[] }}
  */
 export function settleWithPool(bankerIndex, handResults, bets, chips, currentPool = BANKER_ANTE) {
   const n = handResults.length;
@@ -211,11 +215,8 @@ export function settleWithPool(bankerIndex, handResults, bets, chips, currentPoo
     settlements.push({ idx: winner.idx, action: 'win', amount: take, requested: winner.amount, pool });
   }
 
-  // Step 3: 底池剩余归庄家
-  if (pool > 0) {
-    changes[bankerIndex] += pool;
-    settlements.push({ idx: bankerIndex, action: 'pool_remaining', amount: pool, pool: 0 });
-  }
+  // Step 3: 底池剩余保持，跨局持久化（庄家当庄结束时一次性带走）
+  // 不在此处归庄，由调用方在流庄/转庄时处理
 
   return { changes, poolRemaining: pool, settlements };
 }

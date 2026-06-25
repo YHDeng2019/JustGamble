@@ -112,6 +112,8 @@ body {
 .text-gold { color: var(--neon-gold); }
 .text-green { color: var(--neon-green); }
 .text-red { color: var(--neon-red); }
+.text-cyan { color: var(--neon-cyan); }
+.text-default { color: var(--text-primary); }
 
 .user-select {
   display: flex;
@@ -2607,8 +2609,9 @@ body {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: radial-gradient(ellipse at 50% 20%, #1e3a1e 0%, #0a0014 70%);
+  background: radial-gradient(ellipse at 50% 30%, #1e3a2e 0%, #0a0014 75%);
   overflow: hidden;
+  position: relative;
 }
 
 .niu2-header {
@@ -2616,13 +2619,20 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 10px 16px;
-  background: rgba(0,0,0,0.5);
-  border-bottom: 1px solid rgba(6,255,165,0.2);
+  background: rgba(0,0,0,0.55);
+  border-bottom: 1px solid rgba(6,255,165,0.25);
   flex-shrink: 0;
+  backdrop-filter: blur(8px);
+}
+
+.niu2-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .niu2-title {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   font-weight: 900;
   color: #06ffa5;
   text-shadow: 0 0 12px rgba(6,255,165,0.7);
@@ -2635,18 +2645,40 @@ body {
 .niu2-round {
   font-size: 0.82rem;
   color: var(--text-secondary);
-  background: rgba(255,255,255,0.07);
-  padding: 4px 12px;
+  background: rgba(255,255,255,0.08);
+  padding: 5px 14px;
   border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-/* 三层牌桌区域 */
+/* 阶段指示器 */
+.niu2-phase-banner {
+  flex-shrink: 0;
+  padding: 6px 16px;
+  background: linear-gradient(90deg, transparent, rgba(6,255,165,0.12), transparent);
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #06ffa5;
+  letter-spacing: 3px;
+  text-shadow: 0 0 8px rgba(6,255,165,0.5);
+  border-bottom: 1px solid rgba(6,255,165,0.1);
+}
+
+.niu2-phase-banner.reveal { color: var(--neon-cyan); text-shadow: 0 0 8px rgba(0,245,255,0.5); }
+.niu2-phase-banner.settle { color: var(--neon-gold); text-shadow: 0 0 8px rgba(255,214,10,0.5); }
+.niu2-phase-banner.banker, .niu2-phase-banner.banker_opt { color: #ff6b35; text-shadow: 0 0 8px rgba(255,107,53,0.5); }
+.niu2-phase-banner.idle { color: #06ffa5; text-shadow: 0 0 8px rgba(6,255,165,0.5); }
+
+/* 牌桌区域 */
 .niu2-table-area {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 8px 8px 4px;
+  padding: 10px 8px 6px;
   gap: 0;
   overflow: hidden;
   position: relative;
@@ -2659,27 +2691,38 @@ body {
   justify-content: center;
   width: 100%;
   flex-shrink: 0;
+  z-index: 2;
 }
 
-/* 椭圆绿色桌面 */
+/* 操场形绿色桌面 */
 .niu2-felt {
   flex: 1;
-  min-height: 55px;
-  max-height: 100px;
-  width: 80%;
-  background: radial-gradient(ellipse at center, #256325 0%, #1a4d1a 60%, #0f2e0f 100%);
-  border-radius: 50% / 40%;
-  border: 4px solid #2d7a2d;
+  min-height: 80px;
+  width: 88%;
+  max-width: 720px;
+  background: radial-gradient(ellipse at center, #2a7a3a 0%, #1a5d2a 55%, #0f3e1a 100%);
+  border-radius: 28px;
+  border: 6px solid #1a3d1a;
   box-shadow:
-    inset 0 2px 12px rgba(0,0,0,0.5),
-    0 0 30px rgba(6,255,165,0.15),
-    0 4px 20px rgba(0,0,0,0.6);
+    inset 0 2px 16px rgba(0,0,0,0.55),
+    inset 0 0 40px rgba(0,0,0,0.3),
+    0 0 30px rgba(6,255,165,0.12),
+    0 6px 24px rgba(0,0,0,0.7);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   position: relative;
-  margin: -4px 0;
+  margin: -2px 0;
+}
+
+.niu2-felt::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border: 1.5px solid rgba(255,255,255,0.08);
+  border-radius: 22px;
+  pointer-events: none;
 }
 
 .niu2-felt-info {
@@ -2699,45 +2742,85 @@ body {
   display: flex;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
   width: 100%;
   flex-shrink: 0;
-  padding-top: 6px;
+  padding-top: 8px;
+  z-index: 2;
 }
 
 /* 座位 */
 .niu2-seat {
-  background: rgba(15, 8, 30, 0.88);
+  background: rgba(15, 8, 30, 0.9);
   border: 1.5px solid rgba(255,255,255,0.12);
-  border-radius: 12px;
-  padding: 8px 10px;
-  width: 230px;
-  max-width: 230px;
+  border-radius: 14px;
+  padding: 9px 11px;
+  width: 250px;
+  max-width: 250px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
   position: relative;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s;
 }
 
 .niu2-seat.banker {
   border-color: #06ffa5;
-  box-shadow: 0 0 14px rgba(6,255,165,0.3);
+  box-shadow: 0 0 16px rgba(6,255,165,0.35);
+  background: rgba(6, 40, 30, 0.85);
 }
 
 .niu2-seat.human {
   border-color: var(--neon-gold);
-  box-shadow: 0 0 10px rgba(255,214,10,0.2);
+  box-shadow: 0 0 12px rgba(255,214,10,0.25);
 }
 
 .niu2-seat.win-glow {
   border-color: #06ffa5;
-  animation: niuWinPulse 0.6s ease;
+  box-shadow: 0 0 22px rgba(6,255,165,0.55), 0 0 44px rgba(6,255,165,0.25);
+  animation: niuWinPulse 0.8s ease;
+  transform: translateY(-2px);
 }
 
 .niu2-seat.lose-glow {
   border-color: #ff4757;
-  box-shadow: 0 0 12px rgba(255,71,87,0.3);
+  box-shadow: 0 0 14px rgba(255,71,87,0.35);
+  opacity: 0.85;
+}
+
+/* 获胜者皇冠与高亮 */
+.niu2-seat.winner {
+  border-color: var(--neon-gold);
+  box-shadow:
+    0 0 25px rgba(255, 215, 0, 0.7),
+    0 0 50px rgba(255, 215, 0, 0.4),
+    0 0 80px rgba(255, 215, 0, 0.2);
+  background: rgba(30, 22, 0, 0.9);
+  animation: niuWinnerPulse 1s ease-in-out infinite;
+  transform: translateY(-3px);
+  z-index: 5;
+}
+
+.niu2-seat.winner::before {
+  content: '👑';
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.6rem;
+  z-index: 10;
+  animation: niuCrownBounce 0.8s ease-in-out infinite;
+  filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.8));
+}
+
+@keyframes niuWinnerPulse {
+  0%, 100% { box-shadow: 0 0 25px rgba(255, 215, 0, 0.7), 0 0 50px rgba(255, 215, 0, 0.4); }
+  50% { box-shadow: 0 0 35px rgba(255, 215, 0, 0.9), 0 0 70px rgba(255, 215, 0, 0.5); }
+}
+
+@keyframes niuCrownBounce {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-4px); }
 }
 
 .niu2-seat-top {
@@ -2789,17 +2872,17 @@ body {
 /* 扑克牌手牌 — 5 张牌需在座位内完整展示，不重叠 */
 .niu2-hand {
   display: flex;
-  gap: 3px;
+  gap: 4px;
   justify-content: center;
   flex-wrap: nowrap;
   width: 100%;
 }
 
 .niu2-card-wrapper {
-  animation: niuCardReveal 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+  animation: niuCardReveal 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
   flex: 1 1 0;
   min-width: 0;
-  max-width: 40px;
+  max-width: 52px;
   display: flex;
   justify-content: center;
 }
@@ -2811,52 +2894,239 @@ body {
   aspect-ratio: 42 / 60;
 }
 
+/* 获胜牌高亮 */
+.niu2-seat.winner .niu2-card-wrapper {
+  animation: niuCardReveal 0.4s cubic-bezier(0.34,1.56,0.64,1) both, niuCardGlow 1.2s ease-in-out infinite;
+}
+
+@keyframes niuCardGlow {
+  0%, 100% { filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.5)); }
+  50% { filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.9)); }
+}
+
 /* 牌型名称 */
 .niu2-hand-name {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
-  font-size: 0.7rem;
+  font-size: 0.78rem;
   font-weight: 800;
-  padding: 3px 6px;
+  padding: 4px 8px;
   border-radius: 8px;
-  background: rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.08);
   color: #ccc;
+  animation: niuHandNamePop 0.4s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+@keyframes niuHandNamePop {
+  from { transform: scale(0.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 
 .niu2-hand-icon {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
 }
 
 .niu2-multiplier {
   color: var(--neon-gold);
-  font-size: 0.75em;
+  font-size: 0.85em;
+  font-weight: 900;
+  text-shadow: 0 0 6px rgba(255,214,10,0.6);
 }
 
 /* 筹码变化 */
 .niu2-change {
-  font-size: 0.9rem;
+  font-size: 1.1rem;
   font-weight: 900;
   text-align: center;
-  animation: niuChangeFloat 0.5s ease both;
+  animation: niuChangeFloat 0.6s ease both;
 }
 
-.niu2-change.win  { color: #06ffa5; text-shadow: 0 0 8px rgba(6,255,165,0.6); }
-.niu2-change.lose { color: #ff4757; }
+.niu2-change.win  { color: #06ffa5; text-shadow: 0 0 10px rgba(6,255,165,0.7); }
+.niu2-change.lose { color: #ff4757; text-shadow: 0 0 10px rgba(255,71,87,0.6); }
 
 /* 操作栏 */
 .niu2-controls {
   flex-shrink: 0;
-  padding: 8px 14px 10px;
-  background: rgba(0,0,0,0.55);
-  border-top: 1px solid rgba(6,255,165,0.15);
+  padding: 10px 14px 12px;
+  background: rgba(0,0,0,0.6);
+  border-top: 1px solid rgba(6,255,165,0.18);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  backdrop-filter: blur(8px);
+}
+
+/* 倒计时进度条 */
+.niu2-countdown {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.niu2-countdown-text {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
+}
+
+.niu2-countdown-text strong {
+  color: var(--neon-gold);
+  font-size: 1rem;
+  font-weight: 900;
+  text-shadow: 0 0 8px rgba(255,214,10,0.6);
+}
+
+.niu2-countdown-bar {
+  width: 100%;
+  height: 5px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.niu2-countdown-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--neon-gold), #ff6b35);
+  border-radius: 3px;
+  transition: width 1s linear;
+  box-shadow: 0 0 8px rgba(255,214,10,0.6);
+}
+
+/* 结算覆盖层 */
+.niu2-result-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 8500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(4px);
+  animation: niuOverlayIn 0.3s ease;
+  pointer-events: none;
+}
+
+@keyframes niuOverlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.niu2-result-card {
+  background: linear-gradient(145deg, rgba(30,15,50,0.96), rgba(15,5,25,0.96));
+  border: 2px solid var(--neon-gold);
+  border-radius: 20px;
+  padding: 28px 36px;
+  text-align: center;
+  box-shadow: 0 0 40px rgba(255,214,10,0.4), 0 10px 40px rgba(0,0,0,0.6);
+  animation: niuResultCardIn 0.5s cubic-bezier(0.34,1.56,0.64,1);
+  max-width: 90vw;
+}
+
+@keyframes niuResultCardIn {
+  from { transform: scale(0.5) translateY(40px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.niu2-result-badge {
+  font-size: 3rem;
+  margin-bottom: 8px;
+  animation: niuBadgeBounce 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.2s both;
+}
+
+@keyframes niuBadgeBounce {
+  from { transform: scale(0) rotate(-180deg); }
+  to { transform: scale(1) rotate(0); }
+}
+
+.niu2-result-title {
+  font-size: 1.6rem;
+  font-weight: 900;
+  margin: 0 0 6px;
+  letter-spacing: 2px;
+}
+
+.niu2-result-title.win {
+  background: linear-gradient(135deg, #ffd60a, #ff8800);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 0 20px rgba(255,214,10,0.4);
+}
+
+.niu2-result-title.lose {
+  color: #ff4757;
+  text-shadow: 0 0 12px rgba(255,71,87,0.5);
+}
+
+.niu2-result-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+}
+
+.niu2-result-amount {
+  font-size: 2.2rem;
+  font-weight: 900;
+  margin: 8px 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.niu2-result-amount.win { color: #06ffa5; text-shadow: 0 0 16px rgba(6,255,165,0.7); }
+.niu2-result-amount.lose { color: #ff4757; }
+
+/* 彩屑 */
+.niu2-confetti {
+  position: fixed;
+  inset: 0;
+  z-index: 8400;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.niu2-confetti-piece {
+  position: absolute;
+  top: -20px;
+  width: 10px;
+  height: 14px;
+  opacity: 0.9;
+  animation: niuConfettiFall linear forwards;
+}
+
+@keyframes niuConfettiFall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}
+
+.niu2-confetti-0 { background: #ff006e; }
+.niu2-confetti-1 { background: #ffd60a; }
+.niu2-confetti-2 { background: #06ffa5; }
+.niu2-confetti-3 { background: #00f5ff; }
+
+/* 筹码飞行 */
+.niu2-chip-fly {
+  position: fixed;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffe066, #f5a623);
+  border: 2px dashed rgba(255,255,255,0.7);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  z-index: 8300;
+  pointer-events: none;
+  animation: niuChipFly 0.8s cubic-bezier(0.4,0,0.6,1) forwards;
+}
+
+@keyframes niuChipFly {
+  0% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.4) translate(var(--fly-x, 0), var(--fly-y, 0)); }
 }
 
 /* 隐身模式 */
@@ -2868,21 +3138,98 @@ body {
 .stealth-mode .niu2-card-face { box-shadow: none; }
 .stealth-mode .niu2-controls { background: #f0f0f0; border-color: #ccc; }
 
+/* ===== 响应式适配：大屏电脑端 ===== */
+@media (min-width: 1024px) {
+  .niu2-page {
+    max-width: 1100px;
+    margin: 0 auto;
+    border-left: 1px solid rgba(6,255,165,0.1);
+    border-right: 1px solid rgba(6,255,165,0.1);
+  }
+  .niu2-felt {
+    width: 80%;
+    max-width: 800px;
+    min-height: 120px;
+  }
+  .niu2-seat {
+    width: 280px;
+    max-width: 280px;
+    padding: 11px 14px;
+  }
+  .niu2-card-wrapper { max-width: 58px; }
+  .niu2-title { font-size: 1.3rem; }
+  .niu2-header { padding: 12px 24px; }
+  .niu2-controls { padding: 14px 24px 16px; }
+}
+
+/* ===== 响应式适配：平板端 ===== */
+@media (max-width: 768px) and (min-width: 481px) {
+  .niu2-felt { width: 90%; min-height: 90px; }
+  .niu2-seat {
+    width: 220px;
+    max-width: 220px;
+    padding: 8px 10px;
+  }
+  .niu2-card-wrapper { max-width: 50px; }
+  .niu2-players-row { gap: 7px; }
+  .niu2-title { font-size: 1.05rem; }
+  .niu2-header { padding: 8px 14px; }
+}
+
+/* ===== 响应式适配：手机端 ===== */
 @media (max-width: 480px) {
-  .niu2-felt { width: 88%; min-height: 50px; }
+  .niu2-felt { width: 94%; min-height: 70px; border-radius: 20px; border-width: 4px; }
   /* 手机端：闲家座位两列布局，每座位约半屏宽，5 张牌并排展示不重叠 */
-  .niu2-players-row { gap: 8px; }
+  .niu2-players-row { gap: 5px; padding-top: 6px; }
   .niu2-players-row .niu2-seat {
-    width: calc(50% - 4px);
-    max-width: calc(50% - 4px);
-    padding: 7px 8px;
+    width: calc(50% - 3px);
+    max-width: calc(50% - 3px);
+    padding: 6px 7px;
+    border-radius: 11px;
+    gap: 4px;
   }
   /* 庄家座位居中整宽 */
   .niu2-banker-row .niu2-seat {
-    width: 70%;
-    max-width: 70%;
+    width: 78%;
+    max-width: 78%;
+    padding: 7px 9px;
   }
-  .niu2-card-wrapper { max-width: 48px; }
+  .niu2-card-wrapper { max-width: 42px; }
+  .niu2-hand { gap: 2px; }
+  .niu2-hand-name { font-size: 0.68rem; padding: 2px 5px; }
+  .niu2-change { font-size: 0.9rem; }
+  .niu2-result-card { padding: 18px 20px; }
+  .niu2-result-title { font-size: 1.2rem; }
+  .niu2-result-amount { font-size: 1.6rem; }
+  .niu2-title { font-size: 0.95rem; letter-spacing: 1px; }
+  .niu2-round { font-size: 0.72rem; padding: 4px 10px; }
+  .niu2-header { padding: 7px 10px; }
+  .niu2-phase-banner { font-size: 0.72rem; letter-spacing: 2px; padding: 5px 10px; }
+  .niu2-controls { padding: 8px 10px 10px; gap: 6px; }
+  .niu2-seat-top { gap: 6px; }
+  .niu2-name { font-size: 0.72rem; }
+  .niu2-chips { font-size: 0.68rem; }
+  .niu2-pot-amount { font-size: 1.3rem; }
+  .niu2-pot-label { font-size: 0.65rem; }
+  .niu2-fly-chip-body { padding: 4px 10px; }
+  .niu2-fly-chip-name { font-size: 0.62rem; }
+  .niu2-fly-chip-amount { font-size: 0.85rem; }
+  .niu2-banker-opt-btns { flex-direction: column; gap: 8px; width: 80%; }
+  .niu2-banker-opt-btns .btn { width: 100%; }
+}
+
+/* ===== 响应式适配：超小屏手机 ===== */
+@media (max-width: 360px) {
+  .niu2-players-row .niu2-seat {
+    width: calc(50% - 2px);
+    max-width: calc(50% - 2px);
+    padding: 5px 6px;
+  }
+  .niu2-card-wrapper { max-width: 36px; }
+  .niu2-hand-name { font-size: 0.62rem; }
+  .niu2-name { font-size: 0.66rem; }
+  .niu2-chips { font-size: 0.62rem; }
+  .niu2-title { font-size: 0.85rem; }
 }
 
 /* ===== 斗牛 v2 补充样式 ===== */
@@ -2979,6 +3326,99 @@ body {
   text-align: center;
 }
 
+/* ===== 结算筹码飞行动画 ===== */
+.niu2-fly-chip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 60;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.niu2-fly-chip-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ffd700, #ff9500);
+  border: 2px solid #fff;
+  box-shadow: 0 4px 16px rgba(255, 200, 0, 0.6), 0 0 24px rgba(255, 215, 0, 0.4);
+  white-space: nowrap;
+}
+
+.niu2-fly-chip-name {
+  font-size: 0.7rem;
+  color: #5a3a00;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.niu2-fly-chip-amount {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #4a2800;
+  line-height: 1.1;
+}
+
+/* 输家：从头像位置飞向底池位置 */
+.niu2-fly-lose {
+  animation: niu2FlyToPot 0.7s cubic-bezier(0.4, 0, 0.6, 1) forwards;
+}
+
+/* 赢家：从底池位置飞向头像位置 */
+.niu2-fly-win {
+  animation: niu2FlyFromPot 0.7s cubic-bezier(0.2, 0.8, 0.4, 1) forwards;
+}
+
+@keyframes niu2FlyToPot {
+  0% {
+    left: var(--from-x, 50%);
+    top: var(--from-y, 50%);
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.7);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  80% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+  100% {
+    left: var(--to-x, 50%);
+    top: var(--to-y, 50%);
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.4);
+  }
+}
+
+@keyframes niu2FlyFromPot {
+  0% {
+    left: var(--from-x, 50%);
+    top: var(--from-y, 50%);
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.4);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+  80% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    left: var(--to-x, 50%);
+    top: var(--to-y, 50%);
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.7);
+  }
+}
+
 .niu2-banker-controls {
   display: flex;
   flex-direction: column;
@@ -3028,6 +3468,16 @@ body {
   color: #ff6b35;
 }
 
+.niu2-banker-opt-info {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.niu2-banker-opt-info strong {
+  color: var(--neon-gold);
+  font-size: 0.95rem;
+}
+
 .niu2-banker-opt-btns {
   display: flex;
   gap: 12px;
@@ -3053,27 +3503,112 @@ body {
 }
 
 .niu2-bet-input {
-  width: 90px;
-  padding: 7px 10px;
+  width: 100px;
+  padding: 8px 12px;
   border: 1.5px solid rgba(255,255,255,0.25);
   border-radius: 8px;
-  background: rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.08);
   color: #fff;
-  font-size: 0.9rem;
-  font-weight: 700;
+  font-size: 1rem;
+  font-weight: 800;
   text-align: center;
   outline: none;
   transition: border-color 0.15s;
+  font-variant-numeric: tabular-nums;
 }
 
 .niu2-bet-input:focus {
   border-color: var(--neon-gold);
-  background: rgba(255,214,10,0.06);
+  background: rgba(255,214,10,0.08);
+  box-shadow: 0 0 10px rgba(255,214,10,0.3);
 }
 
 .niu2-bet-presets {
   display: flex;
-  gap: 5px;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.niu2-bet-presets .niu-bet-btn {
+  min-width: 52px;
+  padding: 7px 10px;
+  font-size: 0.8rem;
+}
+
+/* 下注滑块 */
+.niu2-bet-slider-row {
+  width: 100%;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.niu2-bet-slider {
+  width: 100%;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255,255,255,0.12);
+  border-radius: 3px;
+  outline: none;
+}
+
+.niu2-bet-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffe066, #f5a623);
+  border: 2px solid #fff;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(255,214,10,0.6);
+}
+
+.niu2-bet-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffe066, #f5a623);
+  border: 2px solid #fff;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(255,214,10,0.6);
+}
+
+/* 倍数提示 */
+.niu2-bet-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.niu2-bet-hint strong {
+  color: var(--neon-gold);
+}
+
+/* 玩家就绪状态（联机） */
+.niu2-ready-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff4757;
+  margin-left: 4px;
+  vertical-align: middle;
+  transition: background 0.3s;
+}
+
+.niu2-ready-dot.ready {
+  background: #06ffa5;
+  box-shadow: 0 0 6px rgba(6,255,165,0.7);
+  animation: niuReadyPulse 1.5s ease infinite;
+}
+
+@keyframes niuReadyPulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(6,255,165,0.7); }
+  50% { box-shadow: 0 0 12px rgba(6,255,165,1); }
 }
 
 .stealth-mode .niu2-bet-input {

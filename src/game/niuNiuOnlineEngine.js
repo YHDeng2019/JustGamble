@@ -15,6 +15,7 @@ import { getFirebaseDB } from '../services/firebase';
 import {
   dealHands, evaluateHand, settleWithPool, aiDecideBet, findNextBanker,
   HAND_RANK, INIT_CHIPS, BASE_BET, BANKER_ANTE, BANKER_MIN_CHIPS, BANKER_MAX_ROUNDS,
+  POOL_MIN_TO_CONTINUE,
 } from '../game/niuNiuEngine';
 
 export class NiuNiuOnlineEngine {
@@ -117,11 +118,18 @@ export class NiuNiuOnlineEngine {
     const s = this._state;
     const pls = s.players;
     const bi  = s.bankerIndex;
+    const anteDeducted = s.anteDeducted || false;
+    const currentPool  = s.pool || 0;
 
-    // 扣庄家入池
-    const newPls = pls.map((p, i) =>
-      i === bi ? { ...p, chips: p.chips - BANKER_ANTE } : p
-    );
+    // 庄家仅在首次当庄时扣款入池，底池跨局保持
+    let newPls = pls;
+    let pool = currentPool;
+    if (!anteDeducted) {
+      newPls = pls.map((p, i) =>
+        i === bi ? { ...p, chips: p.chips - BANKER_ANTE } : p
+      );
+      pool = currentPool + BANKER_ANTE;
+    }
     const hands = dealHands(pls.length);
     const results = hands.map(h => evaluateHand(h));
     const bets = pls.map((p, i) => {
@@ -135,7 +143,8 @@ export class NiuNiuOnlineEngine {
     const newState = {
       ...s,
       players: newPls,
-      pool: BANKER_ANTE,
+      pool,
+      anteDeducted: true,
       phase: 'reveal',
       hands: hands.map(h => h.map(c => ({ ...c }))),
       handResults: results,
@@ -144,16 +153,15 @@ export class NiuNiuOnlineEngine {
       tableMsg: '翻牌中…',
       revealOrder,
       revealedCount: 0,
-      changes: null,
     };
     this._state = newState;
     await this._write(newState);
 
     // 逐步翻牌（host 定时推进）
-    this._runReveal(newState, results, bets, newPls, bi);
+    this._runReveal(newState, results, bets, newPls, bi, pool);
   }
 
-  _runReveal(state, results, bets, pls, bi) {
+  _runReveal(state, results, bets, pls, bi, currentPool) {
     let revealed = 0;
     const total  = pls.length;
     const timer  = setInterval(async () => {
@@ -164,14 +172,14 @@ export class NiuNiuOnlineEngine {
 
       if (revealed >= total) {
         clearInterval(timer);
-        setTimeout(() => this._doSettle(results, bets, pls, bi), 700);
+        setTimeout(() => this._doSettle(results, bets, pls, bi, currentPool), 700);
       }
     }, 500);
   }
 
-  async _doSettle(results, bets, pls, bi) {
+  async _doSettle(results, bets, pls, bi, currentPool) {
     const chips = pls.map(p => p.chips);
-    const { changes } = settleWithPool(bi, results, bets, chips);
+    const { changes, poolRemaining, settlements } = settleWithPool(bi, results, bets, chips, currentPool);
 
     const newPls = pls.map((p, i) => ({ ...p, chips: Math.max(0, p.chips + changes[i]) }));
     const summary = pls.map((p, i) => {
@@ -181,15 +189,25 @@ export class NiuNiuOnlineEngine {
 
     const newRounds = (this._state.bankerRounds || 0) + 1;
     const banker = newPls[bi];
+
+    // 流庄检查：底池 < 20
+    const isFlowing = poolRemaining < POOL_MIN_TO_CONTINUE;
+
     let phase = 'settle';
-    if (newRounds >= BANKER_MAX_ROUNDS && !banker.isBot) phase = 'banker_opt';
-    else if (newRounds >= BANKER_MAX_ROUNDS) phase = 'auto_change_banker';
+    if (isFlowing) {
+      phase = 'auto_change_banker';
+    } else if (newRounds >= BANKER_MAX_ROUNDS && !banker.isBot) {
+      phase = 'banker_opt';
+    } else if (newRounds >= BANKER_MAX_ROUNDS) {
+      phase = 'auto_change_banker';
+    }
 
     const ns = {
       ...this._state,
       players: newPls,
-      pool: 0,
+      pool: poolRemaining,  // 底池持久化
       changes,
+      settlements,
       tableMsg: summary,
       bankerRounds: newRounds,
       phase,
@@ -197,14 +215,20 @@ export class NiuNiuOnlineEngine {
     this._state = ns;
     await this._write(ns);
 
-    // AI 庄：自动处理
+    // AI 庄或流庄：自动处理
     if (phase === 'auto_change_banker') {
       setTimeout(() => this._changeBanker(newPls, bi), 1200);
     }
   }
 
   async _changeBanker(pls, oldBi) {
-    const nextBi = findNextBanker(pls, oldBi);
+    // 庄家带走剩余底池
+    const remainingPool = this._state.pool || 0;
+    let finalPls = pls;
+    if (remainingPool > 0) {
+      finalPls = pls.map((p, i) => i === oldBi ? { ...p, chips: p.chips + remainingPool } : p);
+    }
+    const nextBi = findNextBanker(finalPls, oldBi);
     if (nextBi === -1) {
       const ns = { ...this._state, phase: 'gameover' };
       this._state = ns;
@@ -213,15 +237,17 @@ export class NiuNiuOnlineEngine {
     }
     const ns = {
       ...this._state,
-      players: pls,
+      players: finalPls,
       bankerIndex: nextBi,
       bankerRounds: 0,
       pool: 0,
+      anteDeducted: false,
       phase: 'idle',
       hands: null,
       handResults: null,
       bets: null,
       changes: null,
+      settlements: null,
       tableMsg: '',
       revealOrder: [],
       revealedCount: 0,

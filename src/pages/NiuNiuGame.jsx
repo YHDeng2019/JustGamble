@@ -1,14 +1,16 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import {
   dealHands, evaluateHand, settleWithPool, aiDecideBet, findNextBanker,
   HAND_NAMES, MULTIPLIERS, HAND_RANK, INIT_CHIPS, BASE_BET, BANKER_ANTE,
-  BANKER_MIN_CHIPS, BANKER_MAX_ROUNDS, isSpecialHand,
+  BANKER_MIN_CHIPS, BANKER_MAX_ROUNDS, POOL_MIN_TO_CONTINUE, isSpecialHand,
 } from '../game/niuNiuEngine';
 import { getShuffledAIPlayers } from '../ai/personalities';
 import { refreshSessionUser } from '../auth/session';
 import { playSound } from '../game/sound';
 import Avatar from '../ui/Avatar';
 import Card from '../ui/Card';
+import GameLog from '../ui/GameLog';
 
 const HAND_ICONS = {
   [HAND_RANK.WU_HUA_NIU]:  '/icons/niu/wu_hua_niu.svg',
@@ -16,6 +18,29 @@ const HAND_ICONS = {
   [HAND_RANK.WU_XIAO_NIU]: '/icons/niu/wu_xiao_niu.svg',
   [HAND_RANK.NIU_NIU]:      '/icons/niu/lao_niu.svg',
   [HAND_RANK.NO_NIU]:       '/icons/niu/no_niu.svg',
+};
+
+// 彩屑随机参数（模块级常量，避免渲染时调用 Math.random）
+const CONFETTI_PIECES = [...Array(24)].map(() => ({
+  left: Math.random() * 100,
+  delay: Math.random() * 0.8,
+  duration: 1.5 + Math.random() * 1.5,
+}));
+
+const PHASE = {
+  IDLE:       'idle',
+  BETTING:    'betting',
+  REVEAL:     'reveal',
+  SETTLE:     'settle',
+  BANKER_OPT: 'banker_opt',
+};
+
+const PHASE_LABEL = {
+  [PHASE.IDLE]:       '下注阶段',
+  [PHASE.BETTING]:    '下注阶段',
+  [PHASE.REVEAL]:     '翻牌阶段',
+  [PHASE.SETTLE]:     '结算阶段',
+  [PHASE.BANKER_OPT]: '庄家选择',
 };
 
 function buildPlayers(playerCount, user) {
@@ -28,21 +53,13 @@ function buildPlayers(playerCount, user) {
   ];
 }
 
-const PHASE = {
-  IDLE:       'idle',
-  BETTING:    'betting',
-  REVEAL:     'reveal',
-  SETTLE:     'settle',
-  BANKER_OPT: 'banker_opt',
-};
-
 // 座位组件 — 使用 Card 组件渲染手牌
-const NiuSeat = ({ player, hand, revealed, result, chg, bet, isBanker }) => {
+const NiuSeat = ({ player, hand, revealed, result, chg, bet, isBanker, isWinner, seatIdx }) => {
   const handIcon = result ? HAND_ICONS[result.rank] : null;
   const cls = ['niu2-seat', isBanker && 'banker', player.isHuman && 'human',
-    chg > 0 ? 'win-glow' : chg < 0 ? 'lose-glow' : ''].filter(Boolean).join(' ');
+    isWinner ? 'winner' : (chg > 0 ? 'win-glow' : chg < 0 ? 'lose-glow' : '')].filter(Boolean).join(' ');
   return (
-    <div className={cls}>
+    <div className={cls} data-seat-idx={seatIdx}>
       <div className="niu2-seat-top">
         <Avatar avatar={player.avatar} size="md" />
         <div className="niu2-seat-info">
@@ -84,7 +101,7 @@ const NiuSeat = ({ player, hand, revealed, result, chg, bet, isBanker }) => {
   );
 };
 
-const NiuNiuGame = ({ playerCount, onBack, stealthMode, soundEnabled }) => {
+const NiuNiuGame = ({ playerCount, onBack, stealthMode, onToggleStealth, soundEnabled, onToggleSound }) => {
   const user = refreshSessionUser();
   const [players, setPlayers]             = useState(() => buildPlayers(playerCount, user));
   const [bankerIndex, setBankerIndex]     = useState(0);
@@ -105,12 +122,30 @@ const NiuNiuGame = ({ playerCount, onBack, stealthMode, soundEnabled }) => {
   const [gameOver, setGameOver]           = useState(false);
   const [specialFlash, setSpecialFlash]   = useState(null);
   const [newBankerFlash, setNewBankerFlash] = useState(null);
+  const [winners, setWinners]             = useState(null);
+  const [countdown, setCountdown]         = useState(null);
+  const [showResult, setShowResult]       = useState(false);
+  const [flyingChip, setFlyingChip]       = useState(null);   // 当前飞行的筹码 {from, to, amount, idx}
+  const [gameLog, setGameLog]             = useState([]);
+  const [logCollapsed, setLogCollapsed]   = useState(true);
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const [menuPosition, setMenuPosition]   = useState({ top: 0, right: 0 });
 
   const playersRef  = useRef(players);
   const bankerRef   = useRef(bankerIndex);
   const poolRef     = useRef(pool);
   const roundsRef   = useRef(bankerRounds);
   const anteRef     = useRef(false);
+  const countdownRef = useRef(null);
+  const buttonRef = useRef(null);
+  const settingsRef = useRef(null);
+
+  // 添加游戏日志（限制最多保留 50 条）
+  const addLog = useCallback((player, message, color = 'default') => {
+    const now = new Date();
+    const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+    setGameLog(prev => [...prev.slice(-49), { time, player, message, color }]);
+  }, []);
 
   const syncRefs = (pls, bi, po, br, ante) => {
     playersRef.current  = pls;
@@ -119,6 +154,59 @@ const NiuNiuGame = ({ playerCount, onBack, stealthMode, soundEnabled }) => {
     roundsRef.current   = br;
     anteRef.current     = ante;
   };
+
+  const clearCountdown = useCallback(() => {
+    if (countdownRef.current) {
+      clearInterval(countdownRef.current);
+      countdownRef.current = null;
+    }
+    setCountdown(null);
+  }, []);
+
+  const startCountdown = useCallback((seconds, onComplete) => {
+    clearCountdown();
+    let remaining = seconds;
+    setCountdown(remaining);
+    remaining--;
+    countdownRef.current = setInterval(() => {
+      if (remaining <= 0) {
+        clearCountdown();
+        onComplete();
+      } else {
+        setCountdown(remaining);
+        remaining--;
+      }
+    }, 1000);
+  }, [clearCountdown]);
+
+  useEffect(() => () => clearCountdown(), [clearCountdown]);
+
+  // 计算设置下拉菜单位置
+  useEffect(() => {
+    if (showSettingsMenu && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setMenuPosition({
+        top: rect.bottom + 8,
+        right: window.innerWidth - rect.right
+      });
+    }
+  }, [showSettingsMenu]);
+
+  // 点击外部区域关闭下拉菜单
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (settingsRef.current && !settingsRef.current.contains(event.target) &&
+          buttonRef.current && !buttonRef.current.contains(event.target)) {
+        setShowSettingsMenu(false);
+      }
+    };
+    if (showSettingsMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showSettingsMenu]);
 
   const isHumanBanker = bankerIndex === 0;
 
@@ -130,21 +218,100 @@ const NiuNiuGame = ({ playerCount, onBack, stealthMode, soundEnabled }) => {
     setTimeout(() => setSpecialFlash(null), 2000);
   }, [soundEnabled]);
 
+  // === 庄家轮换 & 流庄逻辑（需在 resolveRound 之前声明） ===
+
+  const doChangeBanker = (pls, oldBankerIdx) => {
+    clearCountdown();
+    // 庄家带走剩余底池
+    const remainingPool = poolRef.current;
+    let finalPls = pls;
+    if (remainingPool > 0) {
+      finalPls = pls.map((p, i) => i === oldBankerIdx ? { ...p, chips: p.chips + remainingPool } : p);
+      setPlayers(finalPls);
+      addLog(pls[oldBankerIdx].name, `带走底池 ${remainingPool} 筹码`, 'gold');
+    }
+    const nextIdx = findNextBanker(finalPls, oldBankerIdx);
+    if (nextIdx === -1) {
+      addLog('系统', '无人可当庄，游戏结束', 'red');
+      setGameOver(true);
+      return;
+    }
+    const nextName = finalPls[nextIdx].name;
+    addLog('系统', `${nextName} 成为新庄家`, 'green');
+    setBankerIndex(nextIdx);
+    setBankerRounds(0);
+    setPool(0);
+    setBankerAnteDeducted(false);
+    setPhase(PHASE.IDLE);
+    setChanges(null);
+    setRevealStep(0);
+    setTableMsg('');
+    setWinners(null);
+    setFlyingChip(null);
+    setRound(r => r + 1);
+    setNewBankerFlash(nextName);
+    playSound('niu_banker', !soundEnabled);
+    setTimeout(() => setNewBankerFlash(null), 1400);
+    syncRefs(finalPls, nextIdx, 0, 0, false);
+    // 仅当人类玩家破产时才结束游戏（AI 破产只是被跳过当庄）
+    if (finalPls[0].chips <= 0) setGameOver(true);
+  };
+
+  const checkFlow = (pls, bankerIdx, curPool, rounds) => {
+    // 流庄检查：底池 < 20
+    if (curPool < POOL_MIN_TO_CONTINUE) {
+      doChangeBanker(pls, bankerIdx, false);
+      return;
+    }
+    const banker = pls[bankerIdx];
+    if (banker.chips < BANKER_MIN_CHIPS) {
+      doChangeBanker(pls, bankerIdx, false);
+      return;
+    }
+    if (rounds >= BANKER_MAX_ROUNDS && banker.isHuman) {
+      setPhase(PHASE.BANKER_OPT);
+      return;
+    }
+    if (rounds >= BANKER_MAX_ROUNDS) {
+      doChangeBanker(pls, bankerIdx, false);
+      return;
+    }
+    setPhase(PHASE.SETTLE);
+  };
+
+  const handleNextRoundAuto = (pls, bankerIdx) => {
+    const banker = pls[bankerIdx];
+    if (banker.chips < BANKER_MIN_CHIPS) {
+      doChangeBanker(pls, bankerIdx, false);
+      return;
+    }
+    setWinners(null);
+    setPhase(PHASE.IDLE);
+    setChanges(null);
+    setRevealStep(0);
+    setTableMsg('');
+    setFlyingChip(null);
+    setRound(r => r + 1);
+  };
+
   // pool 在 runRound 时传入（不再每局修改，仅结算时更新）
   const resolveRound = useCallback((results, aiBets, pls, bankerIdx, currentPool) => {
     const chips = pls.map(p => p.chips);
-    const { changes: chg } = settleWithPool(bankerIdx, results, aiBets, chips, currentPool);
+    const { changes: chg, poolRemaining, settlements: steps } = settleWithPool(bankerIdx, results, aiBets, chips, currentPool);
 
-    // 计算底池变化：输家放入 - 赢家取走，剩余归庄
-    // chg 已包含所有变化（含庄家入池已在前面扣除）
-    // 新底池 = 0（全部分完了，含庄家 chg 里的剩余）
     const newPls = pls.map((p, i) => ({ ...p, chips: Math.max(0, p.chips + chg[i]) }));
     setPlayers(newPls);
     setChanges(chg);
-    setPool(0);
+    setPool(poolRemaining);  // 底池持久化，跨局保持
+
+    // 记录结算日志
+    pls.forEach((p, i) => {
+      const sign = chg[i] >= 0 ? '+' : '';
+      addLog(p.name, `${results[i].name} ${sign}${chg[i]}`, chg[i] > 0 ? 'green' : chg[i] < 0 ? 'red' : 'default');
+    });
 
     const newRounds = roundsRef.current + 1;
-    syncRefs(newPls, bankerIdx, 0, newRounds, anteRef.current);
+    syncRefs(newPls, bankerIdx, poolRemaining, newRounds, anteRef.current);
     setBankerRounds(newRounds);
 
     const summary = pls.map((p, i) => {
@@ -153,20 +320,86 @@ const NiuNiuGame = ({ playerCount, onBack, stealthMode, soundEnabled }) => {
     }).join(' · ');
     setTableMsg(summary);
 
-    if (chg[0] > 0) playSound('niu_win', !soundEnabled);
-    else if (chg[0] < 0) playSound('niu_lose', !soundEnabled);
+    // 播放结算动画：依次展示每个结算步骤（输家先放入，赢家按牌面大→小取）
+    const playSettlements = (stepIdx) => {
+      if (!steps || stepIdx >= steps.length) {
+        // 动画结束，显示结算覆盖层
+        const winnerIds = newPls
+          .map((p, i) => ({ id: p.id, chg: chg[i] }))
+          .filter(w => w.chg > 0)
+          .map(w => w.id);
+        setWinners(winnerIds);
+        setShowResult(true);
+        if (chg[0] > 0) playSound('niu_win', !soundEnabled);
+        else if (chg[0] < 0) playSound('niu_lose', !soundEnabled);
 
-    if (newRounds >= BANKER_MAX_ROUNDS && !newPls[bankerIdx].isHuman) {
-      checkFlow(newPls, bankerIdx, 0, newRounds);
-    } else {
-      setPhase(PHASE.SETTLE);
-    }
-  }, [soundEnabled]);
+        setTimeout(() => {
+          setShowResult(false);
+
+          // 流庄检查：底池 < 20，庄家带走剩余底池并轮换
+          if (poolRemaining < POOL_MIN_TO_CONTINUE) {
+            doChangeBanker(newPls, bankerIdx, false);
+            return;
+          }
+
+          // 满3局检查
+          if (newRounds >= BANKER_MAX_ROUNDS && !newPls[bankerIdx].isHuman) {
+            checkFlow(newPls, bankerIdx, poolRemaining, newRounds);
+          } else if (newRounds >= BANKER_MAX_ROUNDS && newPls[bankerIdx].isHuman) {
+            setPhase(PHASE.BANKER_OPT);
+          } else {
+            setPhase(PHASE.SETTLE);
+            startCountdown(5, () => handleNextRoundAuto(newPls, bankerIdx));
+          }
+        }, 2000);
+        return;
+      }
+      const step = steps[stepIdx];
+      // 计算玩家头像与底池的位置，实现从头像飞出/飞进动画
+      const seatEl = document.querySelector(`[data-seat-idx="${step.idx}"]`);
+      const potEl = document.querySelector('.niu2-pot') || document.querySelector('.niu2-felt');
+      const tableEl = document.querySelector('.niu2-table-area');
+      let fromX = '50%', fromY = '50%', toX = '50%', toY = '50%';
+      if (seatEl && potEl && tableEl) {
+        const seatRect = seatEl.getBoundingClientRect();
+        const potRect = potEl.getBoundingClientRect();
+        const tableRect = tableEl.getBoundingClientRect();
+        const seatCx = seatRect.left + seatRect.width / 2 - tableRect.left;
+        const seatCy = seatRect.top + seatRect.height / 2 - tableRect.top;
+        const potCx = potRect.left + potRect.width / 2 - tableRect.left;
+        const potCy = potRect.top + potRect.height / 2 - tableRect.top;
+        if (step.action === 'lose') {
+          // 输家：从头像飞向底池
+          fromX = `${seatCx}px`; fromY = `${seatCy}px`;
+          toX = `${potCx}px`; toY = `${potCy}px`;
+        } else {
+          // 赢家：从底池飞向头像
+          fromX = `${potCx}px`; fromY = `${potCy}px`;
+          toX = `${seatCx}px`; toY = `${seatCy}px`;
+        }
+      }
+      setFlyingChip({ ...step, fromX, fromY, toX, toY, stepIdx, total: steps.length });
+      playSound('niu_bet', !soundEnabled);
+      setTimeout(() => {
+        setFlyingChip(null);
+        setTimeout(() => playSettlements(stepIdx + 1), 150);
+      }, 700);
+    };
+    playSettlements(0);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [soundEnabled, startCountdown]);
 
   const runRound = useCallback((betMap, pls, bankerIdx, currentPool) => {
     const dealt = dealHands(pls.length);
     const results = dealt.map(h => evaluateHand(h));
     const betsArr = pls.map((p, i) => i === bankerIdx ? 0 : (betMap[p.id] || BASE_BET));
+
+    // 记录下注日志
+    pls.forEach((p, i) => {
+      if (i !== bankerIdx) {
+        addLog(p.name, `下注 ${betsArr[i]}`, 'cyan');
+      }
+    });
 
     setHands(dealt);
     setHandResults(results);
@@ -201,46 +434,6 @@ const NiuNiuGame = ({ playerCount, onBack, stealthMode, soundEnabled }) => {
     }, 480);
   }, [soundEnabled, resolveRound, triggerSpecialEffect]);
 
-  const checkFlow = (pls, bankerIdx, curPool, rounds) => {
-    const banker = pls[bankerIdx];
-    if (banker.chips < BANKER_MIN_CHIPS) {
-      doChangeBanker(pls, bankerIdx, false);
-      return;
-    }
-    if (rounds >= BANKER_MAX_ROUNDS && banker.isHuman) {
-      setPhase(PHASE.BANKER_OPT);
-      return;
-    }
-    if (rounds >= BANKER_MAX_ROUNDS) {
-      doChangeBanker(pls, bankerIdx, false);
-      return;
-    }
-    setPhase(PHASE.SETTLE);
-  };
-
-  const doChangeBanker = (pls, oldBankerIdx, keepBanker) => {
-    const nextIdx = findNextBanker(pls, oldBankerIdx);
-    if (nextIdx === -1) {
-      setGameOver(true);
-      return;
-    }
-    const nextName = pls[nextIdx].name;
-    setBankerIndex(nextIdx);
-    setBankerRounds(0);
-    setPool(0);
-    setBankerAnteDeducted(false);
-    setPhase(PHASE.IDLE);
-    setChanges(null);
-    setRevealStep(0);
-    setTableMsg('');
-    setRound(r => r + 1);
-    setNewBankerFlash(nextName);
-    playSound('niu_banker', !soundEnabled);
-    setTimeout(() => setNewBankerFlash(null), 1400);
-    syncRefs(pls, nextIdx, 0, 0, false);
-    if (pls.some(p => p.chips <= 0)) setGameOver(true);
-  };
-
   // 庄家确认发牌（扣一次底池，后续不再扣）
   const handleDeal = () => {
     if (phase !== PHASE.IDLE) return;
@@ -263,6 +456,7 @@ const NiuNiuGame = ({ playerCount, onBack, stealthMode, soundEnabled }) => {
       setPool(BANKER_ANTE);
       setBankerAnteDeducted(true);
       syncRefs(newPls, bi, currentPool, roundsRef.current, true);
+      addLog(banker.name, `上任扣底池 ${BANKER_ANTE}`, 'gold');
     }
 
     playSound('niu_bet', !soundEnabled);
@@ -299,6 +493,7 @@ const NiuNiuGame = ({ playerCount, onBack, stealthMode, soundEnabled }) => {
       setPool(BANKER_ANTE);
       setBankerAnteDeducted(true);
       syncRefs(newPls, bi, currentPool, roundsRef.current, true);
+      addLog(banker.name, `上任扣底池 ${BANKER_ANTE}`, 'gold');
     }
 
     playSound('niu_bet', !soundEnabled);
@@ -312,6 +507,7 @@ const NiuNiuGame = ({ playerCount, onBack, stealthMode, soundEnabled }) => {
   };
 
   const handleNextRound = () => {
+    clearCountdown();
     const pls = playersRef.current;
     const bi = bankerRef.current;
     const banker = pls[bi];
@@ -319,14 +515,17 @@ const NiuNiuGame = ({ playerCount, onBack, stealthMode, soundEnabled }) => {
       doChangeBanker(pls, bi, false);
       return;
     }
+    setWinners(null);
     setPhase(PHASE.IDLE);
     setChanges(null);
     setRevealStep(0);
     setTableMsg('');
+    setFlyingChip(null);
     setRound(r => r + 1);
   };
 
   const handleBankerOption = (keepBanker) => {
+    clearCountdown();
     const pls = playersRef.current;
     const bi = bankerRef.current;
     if (keepBanker) {
@@ -336,6 +535,8 @@ const NiuNiuGame = ({ playerCount, onBack, stealthMode, soundEnabled }) => {
       setChanges(null);
       setRevealStep(0);
       setTableMsg('');
+      setWinners(null);
+      setFlyingChip(null);
       setRound(r => r + 1);
     } else {
       doChangeBanker(pls, bi, false);
@@ -343,6 +544,7 @@ const NiuNiuGame = ({ playerCount, onBack, stealthMode, soundEnabled }) => {
   };
 
   const resetGame = () => {
+    clearCountdown();
     const newPls = buildPlayers(playerCount, user);
     setPlayers(newPls);
     setBankerIndex(0);
@@ -358,6 +560,8 @@ const NiuNiuGame = ({ playerCount, onBack, stealthMode, soundEnabled }) => {
     setHumanBetInput(String(BASE_BET));
     setSpecialFlash(null);
     setRevealStep(0);
+    setWinners(null);
+    setShowResult(false);
     syncRefs(newPls, 0, 0, 0, false);
   };
 
@@ -383,17 +587,105 @@ const NiuNiuGame = ({ playerCount, onBack, stealthMode, soundEnabled }) => {
         </div>
       )}
 
+      {/* 结算覆盖层 */}
+      {showResult && changes && (
+        <>
+          {changes[0] > 0 && (
+            <div className="niu2-confetti">
+              {CONFETTI_PIECES.map((p, i) => (
+                <div
+                  key={i}
+                  className={`niu2-confetti-piece niu2-confetti-${i % 4}`}
+                  style={{
+                    left: `${p.left}%`,
+                    animationDelay: `${p.delay}s`,
+                    animationDuration: `${p.duration}s`,
+                  }}
+                />
+              ))}
+            </div>
+          )}
+          <div className="niu2-result-overlay">
+            <div className="niu2-result-card">
+              <div className="niu2-result-badge">
+                {changes[0] > 0 ? '🏆' : '💸'}
+              </div>
+              <h2 className={`niu2-result-title ${changes[0] > 0 ? 'win' : 'lose'}`}>
+                {changes[0] > 0 ? '你赢了！' : '本局失利'}
+              </h2>
+              <p className="niu2-result-subtitle">
+                {winners && winners.length > 0
+                  ? `${players.filter(p => winners.includes(p.id)).map(p => p.name).join('、')} 获胜`
+                  : '本局结算'}
+              </p>
+              <div className={`niu2-result-amount ${changes[0] > 0 ? 'win' : 'lose'}`}>
+                {changes[0] > 0 ? '+' : ''}{changes[0]}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
       <div className="niu2-header">
         <button className="btn btn-icon" onClick={onBack}>←</button>
         <div className="niu2-title">
           <img src="/icons/niu/niu_niu_logo.svg" className="niu-title-logo" alt="斗牛" />
           斗牛
         </div>
-        <div className="niu2-round">
-          第 {round} 局
-          {pool > 0 && <span className="niu2-pool-badge">底池 {pool}</span>}
+        <div className="niu2-header-right">
+          <div className="niu2-round">
+            第 {round} 局
+            {pool > 0 && <span className="niu2-pool-badge">底池 {pool}</span>}
+          </div>
+          <div className="settings-dropdown">
+            <button
+              ref={buttonRef}
+              className="btn btn-icon settings-toggle-btn"
+              onClick={() => setShowSettingsMenu(!showSettingsMenu)}
+              title="快捷设置"
+            >
+              ⚙️
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* 快捷设置菜单 */}
+      {showSettingsMenu && ReactDOM.createPortal(
+        <div
+          ref={settingsRef}
+          className="settings-menu"
+          style={{
+            position: 'fixed',
+            top: `${menuPosition.top}px`,
+            right: `${menuPosition.right}px`,
+            zIndex: 9999
+          }}
+        >
+          <div className="settings-menu-item" onClick={onToggleStealth}>
+            <span className="settings-menu-icon">{stealthMode ? '🐟' : '👔'}</span>
+            <span className="settings-menu-label">摸鱼模式</span>
+            <span className={`settings-menu-toggle ${stealthMode ? 'active' : ''}`}>
+              {stealthMode ? 'ON' : 'OFF'}
+            </span>
+          </div>
+          <div className="settings-menu-item" onClick={onToggleSound}>
+            <span className="settings-menu-icon">{soundEnabled ? '🔊' : '🔇'}</span>
+            <span className="settings-menu-label">音效</span>
+            <span className={`settings-menu-toggle ${soundEnabled ? 'active' : ''}`}>
+              {soundEnabled ? 'ON' : 'OFF'}
+            </span>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* 阶段指示器 */}
+      {!gameOver && (
+        <div className={`niu2-phase-banner ${phase}`}>
+          {PHASE_LABEL[phase] || ''}
+        </div>
+      )}
 
       <div className="niu2-table-area">
         <div className="niu2-banker-row">
@@ -405,6 +697,8 @@ const NiuNiuGame = ({ playerCount, onBack, stealthMode, soundEnabled }) => {
             chg={bankerChg}
             bet={0}
             isBanker={true}
+            isWinner={winners?.includes(bankerPlayer.id)}
+            seatIdx={bankerIndex}
           />
         </div>
 
@@ -429,6 +723,26 @@ const NiuNiuGame = ({ playerCount, onBack, stealthMode, soundEnabled }) => {
           {bankerRounds > 0 && (
             <div className="niu2-felt-rounds">庄 {bankerRounds} 局</div>
           )}
+
+          {/* 结算飞行动画 */}
+          {flyingChip && (
+            <div
+              className={`niu2-fly-chip niu2-fly-${flyingChip.action}`}
+              style={{
+                '--from-x': flyingChip.fromX,
+                '--from-y': flyingChip.fromY,
+                '--to-x': flyingChip.toX,
+                '--to-y': flyingChip.toY,
+              }}
+            >
+              <div className="niu2-fly-chip-body">
+                <span className="niu2-fly-chip-name">{players[flyingChip.idx]?.name}</span>
+                <span className="niu2-fly-chip-amount">
+                  {flyingChip.action === 'lose' ? '−' : '+'}{flyingChip.amount}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="niu2-players-row">
@@ -444,6 +758,8 @@ const NiuNiuGame = ({ playerCount, onBack, stealthMode, soundEnabled }) => {
                 chg={changes ? changes[origIdx] : null}
                 bet={bets[origIdx] || 0}
                 isBanker={false}
+                isWinner={winners?.includes(player.id)}
+                seatIdx={origIdx}
               />
             );
           })}
@@ -467,25 +783,42 @@ const NiuNiuGame = ({ playerCount, onBack, stealthMode, soundEnabled }) => {
           ) : (
             <div className="niu-bet-controls">
               <div className="niu-bet-title">你的下注（最多 {humanChips}）</div>
-              <div className="niu2-bet-input-row">
+              <div className="niu2-bet-slider-row">
                 <input
-                  type="number"
-                  className="niu2-bet-input"
-                  value={humanBetInput}
+                  type="range"
+                  className="niu2-bet-slider"
+                  value={humanBet}
                   min={1}
                   max={humanChips}
-                  onChange={e => setHumanBetInput(e.target.value)}
-                  onBlur={() => {
-                    const v = Math.max(1, Math.min(parseInt(humanBetInput) || BASE_BET, humanChips));
+                  onChange={e => {
+                    const v = parseInt(e.target.value);
                     setHumanBet(v);
                     setHumanBetInput(String(v));
                   }}
                 />
-                <div className="niu2-bet-presets">
-                  {[100, 200, 500].filter(v => v <= humanChips).map(v => (
-                    <button key={v} className={`niu-bet-btn${humanBet === v ? ' selected' : ''}`}
-                      onClick={() => { setHumanBet(v); setHumanBetInput(String(v)); }}>{v}</button>
-                  ))}
+                <div className="niu2-bet-input-row">
+                  <input
+                    type="number"
+                    className="niu2-bet-input"
+                    value={humanBetInput}
+                    min={1}
+                    max={humanChips}
+                    onChange={e => setHumanBetInput(e.target.value)}
+                    onBlur={() => {
+                      const v = Math.max(1, Math.min(parseInt(humanBetInput) || BASE_BET, humanChips));
+                      setHumanBet(v);
+                      setHumanBetInput(String(v));
+                    }}
+                  />
+                  <div className="niu2-bet-presets">
+                    {[100, 200, 500].filter(v => v <= humanChips).map(v => (
+                      <button key={v} className={`niu-bet-btn${humanBet === v ? ' selected' : ''}`}
+                        onClick={() => { setHumanBet(v); setHumanBetInput(String(v)); }}>{v}</button>
+                    ))}
+                  </div>
+                </div>
+                <div className="niu2-bet-hint">
+                  牛七~牛九 <strong>×2</strong> · 牛牛 <strong>×3</strong> · 特殊牌型 <strong>×5</strong>
                 </div>
               </div>
               <button className="btn btn-primary btn-large" onClick={handleHumanBet}>
@@ -502,8 +835,18 @@ const NiuNiuGame = ({ playerCount, onBack, stealthMode, soundEnabled }) => {
         {phase === PHASE.SETTLE && !gameOver && (
           <div className="niu2-settle-controls">
             {tableMsg && <div className="niu2-settle-summary">{tableMsg}</div>}
+            {countdown !== null && (
+              <div className="niu2-countdown">
+                <div className="niu2-countdown-text">
+                  <strong>{countdown}</strong> 秒后自动开始下一局
+                </div>
+                <div className="niu2-countdown-bar">
+                  <div className="niu2-countdown-fill" style={{ width: `${(countdown / 5) * 100}%` }} />
+                </div>
+              </div>
+            )}
             <button className="btn btn-primary btn-large" onClick={handleNextRound}>
-              继续下一局 →
+              立即继续 →
             </button>
           </div>
         )}
@@ -512,9 +855,10 @@ const NiuNiuGame = ({ playerCount, onBack, stealthMode, soundEnabled }) => {
           <div className="niu2-banker-opt">
             <div className="niu2-banker-opt-title">已连庄 {bankerRounds} 局</div>
             {tableMsg && <div className="niu2-settle-summary">{tableMsg}</div>}
+            <div className="niu2-banker-opt-info">底池当前有 <strong>{pool}</strong> 筹码，转庄可全部带走</div>
             <div className="niu2-banker-opt-btns">
               <button className="btn btn-primary" onClick={() => handleBankerOption(true)}>继续当庄</button>
-              <button className="btn" onClick={() => handleBankerOption(false)}>转庄</button>
+              <button className="btn" onClick={() => handleBankerOption(false)}>转庄（带走底池）</button>
             </div>
           </div>
         )}
@@ -531,6 +875,12 @@ const NiuNiuGame = ({ playerCount, onBack, stealthMode, soundEnabled }) => {
           </div>
         )}
       </div>
+
+      <GameLog
+        logs={gameLog}
+        collapsed={logCollapsed}
+        onToggle={() => setLogCollapsed(!logCollapsed)}
+      />
     </div>
   );
 };
